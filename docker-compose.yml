@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ierp-postgres
+    environment:
+      POSTGRES_DB: ierp
+      POSTGRES_USER: ierp
+      POSTGRES_PASSWORD: ierp
+    ports:
+      - "5432:5432"
+    volumes:
+      - ierp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ierp -d ierp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: ierp-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: ierp-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ierp.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    profiles:
+      - tools
+
+volumes:
+  ierp_pgdata:

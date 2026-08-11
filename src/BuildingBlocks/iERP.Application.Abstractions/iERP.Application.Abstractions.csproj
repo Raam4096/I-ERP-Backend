@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>iERP.Application.Abstractions</RootNamespace>
+    <AssemblyName>iERP.Application.Abstractions</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\iERP.SharedKernel\iERP.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>
