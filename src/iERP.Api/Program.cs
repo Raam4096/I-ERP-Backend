@@ -64,11 +64,7 @@ builder.Services.AddReportingModule(builder.Configuration);
 builder.Services.AddAiModule(builder.Configuration);
 
 builder.Services.AddIerpRateLimiting();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new() { Title = "i-ERP API", Version = "v1" });
-});
+builder.Services.AddIerpSwagger(builder.Configuration);
 
 var hangfireOptions = builder.Configuration.GetSection(HangfireOptions.SectionName).Get<HangfireOptions>() ?? new HangfireOptions();
 var connectionString = builder.Configuration.GetConnectionString("PrimaryDatabase");
