@@ -108,10 +108,13 @@ public static class ModelBuilderExtensions
     private static void SetTenantSoftDeleteFilter<TEntity>(ModelBuilder modelBuilder, ITenantContext tenantContext)
         where TEntity : class, ITenantEntity, ISoftDeletable
     {
+        // Use TenantEfFilter (AsyncLocal) so EF re-evaluates the current tenant per query.
+        // Capturing the scoped ITenantContext instance in HasQueryFilter is unsafe.
+        _ = tenantContext;
         modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
             !e.IsDeleted &&
-            tenantContext.TenantId != null &&
-            e.TenantId == tenantContext.TenantId);
+            TenantEfFilter.TenantId != null &&
+            e.TenantId == TenantEfFilter.TenantId);
     }
 
     public static void ConfigureMoneyPrecision(this ModelBuilder modelBuilder)

@@ -20,6 +20,8 @@ public sealed class CrmDbContext : DbContext
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Address> Addresses => Set<Address>();
+    public DbSet<LeadFollowUp> LeadFollowUps => Set<LeadFollowUp>();
+    public DbSet<LeadAttachment> LeadAttachments => Set<LeadAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

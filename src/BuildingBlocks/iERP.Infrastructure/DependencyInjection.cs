@@ -14,13 +14,18 @@ using iERP.Infrastructure.Notifications;
 using iERP.Infrastructure.Persistence.Interceptors;
 using iERP.Infrastructure.Reporting;
 using iERP.Infrastructure.Storage;
+using iERP.Infrastructure.Security;
 using iERP.Infrastructure.Tenancy;
+using iERP.SharedKernel.Security;
 using iERP.SharedKernel.Tenancy;
 using iERP.SharedKernel.Time;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -45,9 +50,10 @@ public static class DependencyInjection
         services.Configure<HangfireOptions>(configuration.GetSection(HangfireOptions.SectionName));
 
         services.AddHttpContextAccessor();
-        services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IClock, iERP.SharedKernel.Time.SystemClock>();
         services.AddScoped<ITenantContext, TenantContext>();
         services.AddScoped<ITenantResolver, ClaimTenantResolver>();
+        services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<TenantSaveChangesInterceptor>();
         services.AddScoped<AuditSaveChangesInterceptor>();
 
@@ -72,7 +78,28 @@ public static class DependencyInjection
             ? "LOCAL_DEV_ONLY_CHANGE_ME_TO_A_LONG_RANDOM_SECRET_KEY"
             : jwt.SigningKey;
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = "Smart";
+                options.DefaultChallengeScheme = "Smart";
+            })
+            .AddPolicyScheme("Smart", "JWT or Development", options =>
+            {
+                options.ForwardDefaultSelector = context =>
+                {
+                    var header = context.Request.Headers.Authorization.ToString();
+                    if (!string.IsNullOrWhiteSpace(header) &&
+                        header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return JwtBearerDefaults.AuthenticationScheme;
+                    }
+
+                    var env = context.RequestServices.GetService<IWebHostEnvironment>();
+                    return env?.IsDevelopment() == true
+                        ? DevelopmentAuthenticationHandler.SchemeName
+                        : JwtBearerDefaults.AuthenticationScheme;
+                };
+            })
             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -86,7 +113,10 @@ public static class DependencyInjection
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
-            });
+            })
+            .AddScheme<AuthenticationSchemeOptions, DevelopmentAuthenticationHandler>(
+                DevelopmentAuthenticationHandler.SchemeName,
+                _ => { });
 
         services.AddAuthorization();
     }

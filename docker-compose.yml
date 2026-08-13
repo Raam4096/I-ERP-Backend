@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: ierp-postgres
     environment:
-      POSTGRES_DB: ierp
+      POSTGRES_DB: ierp_dev
       POSTGRES_USER: ierp
       POSTGRES_PASSWORD: ierp
     ports:
@@ -11,7 +11,7 @@ services:
     volumes:
       - ierp_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ierp -d ierp"]
+      test: ["CMD-SHELL", "pg_isready -U ierp -d ierp_dev"]
       interval: 5s
       timeout: 5s
       retries: 10

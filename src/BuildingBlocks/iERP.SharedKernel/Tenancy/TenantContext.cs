@@ -13,7 +13,12 @@ public sealed class TenantContext : ITenantContext
         }
 
         TenantId = tenantId;
+        TenantEfFilter.TenantId = tenantId;
     }
 
-    public void Clear() => TenantId = null;
+    public void Clear()
+    {
+        TenantId = null;
+        TenantEfFilter.Clear();
+    }
 }
