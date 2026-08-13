@@ -22,7 +22,7 @@ dotnet tool install --global dotnet-ef
 docker compose up -d
 ```
 
-This starts PostgreSQL (`localhost:5432`, db/user/password: `ierp`) and Redis (`localhost:6379`).
+This starts PostgreSQL (`localhost:5432`, db: `ierp_dev`, user/password: `ierp`) and Redis (`localhost:6379`).
 
 Optional pgAdmin:
 

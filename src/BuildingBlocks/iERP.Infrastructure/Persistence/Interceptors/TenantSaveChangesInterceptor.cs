@@ -1,7 +1,9 @@
 using iERP.SharedKernel.Primitives;
+using iERP.SharedKernel.Security;
 using iERP.SharedKernel.Tenancy;
 using iERP.SharedKernel.Time;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace iERP.Infrastructure.Persistence.Interceptors;
@@ -10,11 +12,16 @@ public sealed class TenantSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
+    private readonly ICurrentUser _currentUser;
 
-    public TenantSaveChangesInterceptor(ITenantContext tenantContext, IClock clock)
+    public TenantSaveChangesInterceptor(
+        ITenantContext tenantContext,
+        IClock clock,
+        ICurrentUser currentUser)
     {
         _tenantContext = tenantContext;
         _clock = clock;
+        _currentUser = currentUser;
     }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -73,12 +80,34 @@ public sealed class TenantSaveChangesInterceptor : SaveChangesInterceptor
             if (entry.State is EntityState.Added)
             {
                 entry.Property(nameof(IAuditable.CreatedAt)).CurrentValue = _clock.UtcNow;
+                if (_currentUser.UserId.HasValue)
+                {
+                    entry.Property(nameof(IAuditable.CreatedBy)).CurrentValue = _currentUser.UserId;
+                }
             }
 
             if (entry.State is EntityState.Modified)
             {
                 entry.Property(nameof(IAuditable.UpdatedAt)).CurrentValue = _clock.UtcNow;
+                if (_currentUser.UserId.HasValue)
+                {
+                    entry.Property(nameof(IAuditable.UpdatedBy)).CurrentValue = _currentUser.UserId;
+                }
+
+                TryBumpVersion(entry);
             }
         }
+    }
+
+    private static void TryBumpVersion(EntityEntry entry)
+    {
+        var versionProperty = entry.Properties.FirstOrDefault(p => p.Metadata.Name == nameof(AuditableEntity.Version));
+        if (versionProperty is null || versionProperty.Metadata.ClrType != typeof(long))
+        {
+            return;
+        }
+
+        var current = versionProperty.CurrentValue is long value ? value : 0L;
+        versionProperty.CurrentValue = current + 1;
     }
 }

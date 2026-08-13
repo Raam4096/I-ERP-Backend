@@ -17,6 +17,7 @@ using iERP.Modules.Catalog;
 using iERP.Modules.Catalog.Api;
 using iERP.Modules.CRM;
 using iERP.Modules.CRM.Api;
+using iERP.Modules.CRM.Infrastructure;
 using iERP.Modules.Engines;
 using iERP.Modules.Engines.Api;
 using iERP.Modules.Finance;
@@ -40,6 +41,7 @@ using iERP.Modules.Reporting.Api;
 using iERP.Modules.Sales;
 using iERP.Modules.Sales.Api;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,10 +91,15 @@ else
 
 var app = builder.Build();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var crmDb = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
+    await crmDb.Database.MigrateAsync();
+}
+
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseMiddleware<TenantResolutionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -101,6 +108,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 
@@ -122,6 +130,7 @@ app.MapHealthChecks("/health");
 app.MapPlatformEndpoints();
 app.MapEnginesEndpoints();
 app.MapCrmEndpoints();
+app.MapLeadEndpoints();
 app.MapCustomerEndpoints();
 app.MapCatalogEndpoints();
 app.MapSalesEndpoints();

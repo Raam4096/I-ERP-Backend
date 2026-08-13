@@ -30,11 +30,11 @@
 
 **Why:** Local development must not require Azure credentials.
 
-## ADR-006: No MediatR mandate
+## ADR-006: MediatR adopted for module CQRS (CRM first)
 
-**Decision:** Provide lightweight `ICommandHandler`/`IQueryHandler` abstractions only.
+**Decision:** CRM Lead Management uses MediatR + FluentValidation pipeline behaviors + AutoMapper 16.
 
-**Why:** MediatR can be adopted later where useful without forcing it everywhere now.
+**Why:** Explicit product requirement for CQRS handlers. Scoped to module DI; other modules can adopt gradually. AutoMapper 16 used due to vulnerability advisory on 13.x/14.x.
 
 ## ADR-007: AI never touches the database
 
@@ -47,3 +47,9 @@
 **Decision:** BOM uses `BomVersion`; print templates use `TemplateVersionNumber`.
 
 **Why:** `AuditableEntity.Version` is the concurrency token; reusing `Version` caused CS0108 under TreatWarningsAsErrors.
+
+## ADR-009: Development authentication fallback
+
+**Decision:** In Development, when no Bearer token is present, authenticate via `Development` scheme using `X-Tenant-Id` / `X-User-Id` headers (with defaults).
+
+**Why:** Lead APIs require `Authorize` before login endpoints exist; enables local Swagger testing safely outside Production.

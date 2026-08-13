@@ -2,25 +2,187 @@ using iERP.SharedKernel.Primitives;
 
 namespace iERP.Modules.CRM.Domain;
 
+/// <summary>
+/// Lead aggregate root. Owns follow-ups; follow-ups own attachments.
+/// </summary>
 public sealed class Lead : AuditableEntity
 {
+    private readonly List<LeadFollowUp> _followUps = [];
 
-    public Guid SubsidiaryId { get; set; }
-    public string LeadNumber { get; set; } = string.Empty;
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
-    public string? CompanyName { get; set; }
-    public string? Email { get; set; }
-    public string? Phone { get; set; }
-    public string? Source { get; set; }
-    public string Status { get; set; } = "new";
-    public string? Rating { get; set; }
-    public decimal? EstimatedValue { get; set; }
-    public string? CurrencyCode { get; set; }
-    public Guid? OwnerUserId { get; set; }
-    public Guid? ConvertedCustomerId { get; set; }
-    public Guid? ConvertedContactId { get; set; }
-    public Guid? ConvertedOpportunityId { get; set; }
-    public DateTimeOffset? ConvertedAt { get; set; }
+    private Lead()
+    {
+    }
 
+    public string LeadNumber { get; private set; } = string.Empty;
+    public string CompanyName { get; private set; } = string.Empty;
+    public string? ContactPerson { get; private set; }
+    public string Phone { get; private set; } = string.Empty;
+    public string Email { get; private set; } = string.Empty;
+    public string? Industry { get; private set; }
+    public string? Address { get; private set; }
+    public decimal? AnnualRevenue { get; private set; }
+    public Guid? AssignedToUserId { get; private set; }
+    public string? CompanySize { get; private set; }
+    public string? LeadSource { get; private set; }
+    public string? ProjectDescription { get; private set; }
+    public string? ProjectType { get; private set; }
+    public string Status { get; private set; } = LeadStatuses.New;
+    public string? Subsidiary { get; private set; }
+    public Guid? SubsidiaryId { get; private set; }
+    public string? Website { get; private set; }
+    public string? Notes { get; private set; }
+
+    // Retained for future Opportunity conversion without coupling now.
+    public Guid? ConvertedCustomerId { get; private set; }
+    public Guid? ConvertedContactId { get; private set; }
+    public Guid? ConvertedOpportunityId { get; private set; }
+    public DateTimeOffset? ConvertedAt { get; private set; }
+
+    public IReadOnlyCollection<LeadFollowUp> FollowUps => _followUps.AsReadOnly();
+
+    public static Lead Create(
+        Guid tenantId,
+        string leadNumber,
+        string companyName,
+        string phone,
+        string email,
+        string? contactPerson,
+        string? industry,
+        string? address,
+        decimal? annualRevenue,
+        Guid? assignedToUserId,
+        string? companySize,
+        string? leadSource,
+        string? projectDescription,
+        string? projectType,
+        string? status,
+        string? subsidiary,
+        Guid? subsidiaryId,
+        string? website,
+        string? notes)
+    {
+        var lead = new Lead();
+        lead.SetTenantId(tenantId);
+        lead.LeadNumber = leadNumber.Trim();
+        lead.ApplyDetails(
+            companyName,
+            phone,
+            email,
+            contactPerson,
+            industry,
+            address,
+            annualRevenue,
+            assignedToUserId,
+            companySize,
+            leadSource,
+            projectDescription,
+            projectType,
+            string.IsNullOrWhiteSpace(status) ? LeadStatuses.New : status,
+            subsidiary,
+            subsidiaryId,
+            website,
+            notes);
+        return lead;
+    }
+
+    public void Update(
+        string companyName,
+        string phone,
+        string email,
+        string? contactPerson,
+        string? industry,
+        string? address,
+        decimal? annualRevenue,
+        Guid? assignedToUserId,
+        string? companySize,
+        string? leadSource,
+        string? projectDescription,
+        string? projectType,
+        string? status,
+        string? subsidiary,
+        Guid? subsidiaryId,
+        string? website,
+        string? notes)
+    {
+        ApplyDetails(
+            companyName,
+            phone,
+            email,
+            contactPerson,
+            industry,
+            address,
+            annualRevenue,
+            assignedToUserId,
+            companySize,
+            leadSource,
+            projectDescription,
+            projectType,
+            status ?? Status,
+            subsidiary,
+            subsidiaryId,
+            website,
+            notes);
+    }
+
+    public LeadFollowUp AddFollowUp(
+        string activityType,
+        DateTimeOffset followUpDate,
+        DateTimeOffset? nextFollowUpDate,
+        string? remarks,
+        string? status)
+    {
+        var followUp = LeadFollowUp.Create(
+            TenantId,
+            Id,
+            activityType,
+            followUpDate,
+            nextFollowUpDate,
+            remarks,
+            status);
+        _followUps.Add(followUp);
+        return followUp;
+    }
+
+    public void MarkDeleted(Guid? deletedBy, DateTimeOffset deletedAt) => SoftDelete(deletedBy, deletedAt);
+
+    private void ApplyDetails(
+        string companyName,
+        string phone,
+        string email,
+        string? contactPerson,
+        string? industry,
+        string? address,
+        decimal? annualRevenue,
+        Guid? assignedToUserId,
+        string? companySize,
+        string? leadSource,
+        string? projectDescription,
+        string? projectType,
+        string status,
+        string? subsidiary,
+        Guid? subsidiaryId,
+        string? website,
+        string? notes)
+    {
+        CompanyName = companyName.Trim();
+        Phone = phone.Trim();
+        Email = email.Trim().ToLowerInvariant();
+        ContactPerson = Normalize(contactPerson);
+        Industry = Normalize(industry);
+        Address = Normalize(address);
+        AnnualRevenue = annualRevenue;
+        AssignedToUserId = assignedToUserId;
+        CompanySize = Normalize(companySize);
+        LeadSource = Normalize(leadSource);
+        ProjectDescription = Normalize(projectDescription);
+        ProjectType = Normalize(projectType);
+        Status = status.Trim();
+        Subsidiary = Normalize(subsidiary);
+        SubsidiaryId = subsidiaryId;
+        Website = Normalize(website);
+        Notes = Normalize(notes);
+    }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
