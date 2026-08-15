@@ -64,6 +64,23 @@ builder.Services.AddReportingModule(builder.Configuration);
 builder.Services.AddAiModule(builder.Configuration);
 
 builder.Services.AddIerpRateLimiting();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Ui", policy =>
+    {
+        var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+                      ??
+                      [
+                          "http://localhost:3000",
+                          "http://localhost:5173",
+                          "https://i-erp-dev-ui.vercel.app"
+                      ];
+
+        policy.WithOrigins(origins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -100,6 +117,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseCors("Ui");
 
 if (app.Environment.IsDevelopment())
 {

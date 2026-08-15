@@ -102,6 +102,8 @@ docs/
 - [Adding an entity](docs/adding-an-entity.md)
 - [Database migrations](docs/database-migrations.md)
 - [Architecture decisions](docs/architecture-decisions.md)
+- [UI API integration](docs/ui-api-integration.md)
+- [CRM lead management](docs/crm-lead-management.md)
 - [Generated plan](docs/generated-plan.md)
 
 ## Configuration
