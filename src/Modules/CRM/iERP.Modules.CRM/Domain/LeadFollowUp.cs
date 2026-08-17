@@ -1,4 +1,5 @@
 using iERP.SharedKernel.Primitives;
+using iERP.SharedKernel.Time;
 
 namespace iERP.Modules.CRM.Domain;
 
@@ -64,8 +65,8 @@ public sealed class LeadFollowUp : AuditableEntity
         string? status)
     {
         ActivityType = activityType.Trim();
-        FollowUpDate = followUpDate;
-        NextFollowUpDate = nextFollowUpDate;
+        FollowUpDate = DateTimeOffsetUtc.Normalize(followUpDate);
+        NextFollowUpDate = DateTimeOffsetUtc.Normalize(nextFollowUpDate);
         Remarks = string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim();
         Status = string.IsNullOrWhiteSpace(status) ? FollowUpStatuses.Open : status.Trim();
     }

@@ -167,6 +167,8 @@ All of these require auth (Development headers or future JWT).
 
 JSON property names are **camelCase**.
 
+**Dates:** send ISO-8601 (`followUpDate`, `nextFollowUpDate`). Any offset is accepted (e.g. `+05:30`); the API stores **UTC** in PostgreSQL. Prefer `...Z` (UTC) when possible.
+
 ### List query parameters
 
 `GET /api/crm/leads?page=1&pageSize=20&search=&status=&assignedToUserId=&sortBy=&sortDescending=true`
