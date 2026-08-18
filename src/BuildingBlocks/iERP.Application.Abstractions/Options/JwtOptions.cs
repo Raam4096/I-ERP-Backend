@@ -7,6 +7,6 @@ public sealed class JwtOptions
     public string Issuer { get; set; } = "i-ERP";
     public string Audience { get; set; } = "i-ERP";
     public string SigningKey { get; set; } = string.Empty;
-    public int AccessTokenMinutes { get; set; } = 30;
+    public int AccessTokenMinutes { get; set; } = 15;
     public int RefreshTokenDays { get; set; } = 14;
 }

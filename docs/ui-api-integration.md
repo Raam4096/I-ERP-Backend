@@ -76,45 +76,44 @@ Replace the default tenant/user GUIDs when real login exists.
 
 ## 3. Authentication & headers (current state)
 
-**JWT login is not implemented yet.** There is no `/login` or token issue API.
+**JWT login is implemented.** Prefer Bearer tokens for UI (local, Vercel, Railway).
 
-### Temporary auth (Development)
+Full contract: [FRONTEND_AUTH_INTEGRATION.md](./FRONTEND_AUTH_INTEGRATION.md)
 
-When the API runs with `ASPNETCORE_ENVIRONMENT=Development` (local, and Railway while JWT is pending):
-
-| Header | Required? | Description |
-|--------|-----------|-------------|
-| `Content-Type` | Yes for JSON body | `application/json` |
-| `X-Tenant-Id` | Recommended | Tenant GUID (default used if omitted) |
-| `X-User-Id` | Recommended | User GUID (default used if omitted) |
-| `Authorization` | Not needed in Development | — |
-
-**Default GUIDs if headers are omitted:**
-
-- Tenant: `11111111-1111-1111-1111-111111111111`
-- User: `22222222-2222-2222-2222-222222222222`
-
-### Production (JWT — future)
-
-When the API is `Production` without Development auth:
+### Recommended (all environments)
 
 ```http
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-JWT must include claims:
+Login: `POST /api/v1/auth/login` with `tenantCode`, `email`, `password`.
+
+JWT claims used by the API:
 
 - `tenant_id` (GUID)
 - `user_id` (GUID)
 
-Until that is shipped, calling Railway in **Production** returns **401** on `/api/crm/...`.
+### Temporary Development header auth (local only)
 
-### What UI should send today (Railway + Vercel)
+When Development and **no** `Authorization` header is sent:
 
-1. Confirm Railway API has `ASPNETCORE_ENVIRONMENT=Development`.
-2. Send `Content-Type`, `X-Tenant-Id`, `X-User-Id` on every CRM request.
-3. Do **not** send a fake Bearer token unless it is a real JWT signed by the API.
+| Header | Required? | Description |
+|--------|-----------|-------------|
+| `X-Tenant-Id` | Optional | Tenant GUID (defaults applied if omitted) |
+| `X-User-Id` | Optional | User GUID |
+
+Default GUIDs: tenant `11111111-...1111`, user `22222222-...2222`.
+
+Do not use header auth for the Vercel UI once JWT is wired.
+
+### Local seed user (Development + AuthSeed)
+
+| Field | Value |
+|-------|--------|
+| Tenant | `demo` |
+| Email | `admin@ierp.local` |
+| Password | `ChangeMe!123` |
 
 ---
 
@@ -298,8 +297,9 @@ Lead numbers look like `LEAD-2026-000001`.
 ## 8. Checklist for UI developers
 
 - [ ] Set `VITE_API_BASE_URL` / `NEXT_PUBLIC_API_BASE_URL` to local or Railway  
-- [ ] Send `Content-Type: application/json` on writes  
-- [ ] Send `X-Tenant-Id` and `X-User-Id` until JWT login exists  
+- [ ] Login via `POST /api/v1/auth/login`, store tokens  
+- [ ] Send `Authorization: Bearer <accessToken>` on CRM calls  
+- [ ] Handle `401` with refresh once, then login  
 - [ ] Run UI from an allowed origin (`localhost:3000`, `localhost:5173`, or Vercel URL above)  
 - [ ] Handle `400` / `401` / `404` / `409`  
 - [ ] Do not rely on Swagger in Production  
@@ -309,9 +309,9 @@ Lead numbers look like `LEAD-2026-000001`.
 
 ## 9. Not available yet
 
-- Login / refresh token APIs  
-- Real JWT issuance for Production  
-- Binary file upload to blob storage  
+- Full user administration APIs (invite/reset password UI flows)
+- Real binary file upload to blob storage  
 - Lead → Opportunity conversion  
+- Permission-policy authorization on every module endpoint  
 
-When JWT ships, replace header-based auth with `Authorization: Bearer ...` and keep the same REST paths.
+Login / refresh / logout JWT APIs **are available** — see [FRONTEND_AUTH_INTEGRATION.md](./FRONTEND_AUTH_INTEGRATION.md).
