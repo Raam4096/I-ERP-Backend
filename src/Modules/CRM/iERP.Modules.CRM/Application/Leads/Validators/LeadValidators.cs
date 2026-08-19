@@ -1,4 +1,5 @@
 using FluentValidation;
+using iERP.Modules.CRM.Application.Common.Validation;
 using iERP.Modules.CRM.Application.Leads.Dtos;
 
 namespace iERP.Modules.CRM.Application.Leads.Validators;
@@ -21,7 +22,7 @@ public sealed class CreateLeadRequestValidator : AbstractValidator<CreateLeadReq
         RuleFor(x => x.Subsidiary).MaximumLength(256);
         RuleFor(x => x.Website)
             .MaximumLength(512)
-            .Must(BeValidUrlOrEmpty).WithMessage("Website must be a valid URL.");
+            .Must(UrlValidation.BeValidHttpUrlOrEmpty).WithMessage("Website must be a valid URL.");
         RuleFor(x => x.Notes).MaximumLength(4000);
         RuleFor(x => x.AnnualRevenue).GreaterThanOrEqualTo(0).When(x => x.AnnualRevenue.HasValue);
 
@@ -35,17 +36,6 @@ public sealed class CreateLeadRequestValidator : AbstractValidator<CreateLeadReq
                 .Must(f => !f.NextFollowUpDate.HasValue || f.NextFollowUpDate >= f.FollowUpDate)
                 .WithMessage("Next follow-up date must be on or after follow-up date.");
         });
-    }
-
-    private static bool BeValidUrlOrEmpty(string? website)
-    {
-        if (string.IsNullOrWhiteSpace(website))
-        {
-            return true;
-        }
-
-        return Uri.TryCreate(website, UriKind.Absolute, out var uri) &&
-               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }
 
@@ -67,20 +57,9 @@ public sealed class UpdateLeadRequestValidator : AbstractValidator<UpdateLeadReq
         RuleFor(x => x.Subsidiary).MaximumLength(256);
         RuleFor(x => x.Website)
             .MaximumLength(512)
-            .Must(BeValidUrlOrEmpty).WithMessage("Website must be a valid URL.");
+            .Must(UrlValidation.BeValidHttpUrlOrEmpty).WithMessage("Website must be a valid URL.");
         RuleFor(x => x.Notes).MaximumLength(4000);
         RuleFor(x => x.AnnualRevenue).GreaterThanOrEqualTo(0).When(x => x.AnnualRevenue.HasValue);
-    }
-
-    private static bool BeValidUrlOrEmpty(string? website)
-    {
-        if (string.IsNullOrWhiteSpace(website))
-        {
-            return true;
-        }
-
-        return Uri.TryCreate(website, UriKind.Absolute, out var uri) &&
-               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }
 

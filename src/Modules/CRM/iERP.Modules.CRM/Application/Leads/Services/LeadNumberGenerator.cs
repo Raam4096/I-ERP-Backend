@@ -20,9 +20,10 @@ public sealed class LeadNumberGenerator : ILeadNumberGenerator
         var year = _clock.UtcNow.Year;
         var prefix = $"LEAD-{year}-";
 
+        // Include soft-deleted rows: unique index still reserves lead_number.
         var last = await _db.Leads
             .IgnoreQueryFilters()
-            .Where(x => x.TenantId == tenantId && !x.IsDeleted && x.LeadNumber.StartsWith(prefix))
+            .Where(x => x.TenantId == tenantId && x.LeadNumber.StartsWith(prefix))
             .OrderByDescending(x => x.LeadNumber)
             .Select(x => x.LeadNumber)
             .FirstOrDefaultAsync(cancellationToken);
