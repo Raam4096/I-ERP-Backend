@@ -185,6 +185,7 @@ app.MapPlatformEndpoints();
 app.MapEnginesEndpoints();
 app.MapCrmEndpoints();
 app.MapLeadEndpoints();
+app.MapOpportunityEndpoints();
 app.MapCustomerEndpoints();
 app.MapCatalogEndpoints();
 app.MapSalesEndpoints();

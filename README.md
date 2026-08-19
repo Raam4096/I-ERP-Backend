@@ -106,6 +106,7 @@ docs/
 - [Frontend auth integration](docs/FRONTEND_AUTH_INTEGRATION.md)
 - [JWT auth implementation](docs/JWT_AUTH_IMPLEMENTATION.md)
 - [CRM lead management](docs/crm-lead-management.md)
+- [CRM opportunity management](docs/crm-opportunity-management.md)
 - [Generated plan](docs/generated-plan.md)
 
 ## Configuration

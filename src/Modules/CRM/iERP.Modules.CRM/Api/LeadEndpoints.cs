@@ -1,6 +1,9 @@
 using iERP.Modules.CRM.Application.Leads.Commands;
 using iERP.Modules.CRM.Application.Leads.Dtos;
 using iERP.Modules.CRM.Application.Leads.Queries;
+using iERP.Modules.CRM.Application.Opportunities.Commands;
+using iERP.Modules.CRM.Application.Opportunities.Dtos;
+using iERP.Modules.CRM.Application.Opportunities.Queries;
 using iERP.SharedKernel.Results;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -44,6 +47,13 @@ public static class LeadEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
+        leads.MapPost("/{leadId:guid}/convert-to-opportunity", ConvertToOpportunityAsync)
+            .WithName("ConvertLeadToOpportunity")
+            .Produces<ApiResponse<OpportunityDto>>(StatusCodes.Status201Created)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
+
         leads.MapPost("/{leadId:guid}/followups", CreateFollowUpAsync)
             .WithName("CreateLeadFollowUp")
             .Produces<ApiResponse<LeadFollowUpDto>>(StatusCodes.Status201Created)
@@ -52,6 +62,11 @@ public static class LeadEndpoints
         leads.MapGet("/{leadId:guid}/timeline", GetTimelineAsync)
             .WithName("GetLeadTimeline")
             .Produces<ApiResponse<IReadOnlyList<LeadFollowUpDto>>>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
+        leads.MapGet("/{leadId:guid}/history", GetLeadHistoryAsync)
+            .WithName("GetLeadHistory")
+            .Produces<ApiResponse<IReadOnlyList<CrmHistoryItemDto>>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         var followUps = app.MapGroup("/api/crm/followups")
@@ -128,6 +143,18 @@ public static class LeadEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> ConvertToOpportunityAsync(
+        Guid leadId,
+        [FromBody] ConvertLeadToOpportunityRequest request,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new ConvertLeadToOpportunityCommand(leadId, request), cancellationToken);
+        return Results.Created(
+            $"/api/crm/opportunities/{result.Id}",
+            ApiResponse<OpportunityDto>.Ok(result, "Lead converted to opportunity successfully."));
+    }
+
     private static async Task<IResult> CreateFollowUpAsync(
         Guid leadId,
         [FromBody] CreateFollowUpRequest request,
@@ -157,5 +184,14 @@ public static class LeadEndpoints
     {
         var result = await mediator.Send(new GetLeadTimelineQuery(leadId), cancellationToken);
         return Results.Ok(ApiResponse<IReadOnlyList<LeadFollowUpDto>>.Ok(result));
+    }
+
+    private static async Task<IResult> GetLeadHistoryAsync(
+        Guid leadId,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetLeadHistoryQuery(leadId), cancellationToken);
+        return Results.Ok(ApiResponse<IReadOnlyList<CrmHistoryItemDto>>.Ok(result));
     }
 }

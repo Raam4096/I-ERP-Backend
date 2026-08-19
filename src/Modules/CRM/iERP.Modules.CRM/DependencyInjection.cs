@@ -3,6 +3,7 @@ using iERP.Infrastructure.Persistence.Interceptors;
 using iERP.Modules.CRM.Application.Common;
 using iERP.Modules.CRM.Application.Leads.Services;
 using iERP.Modules.CRM.Application.Mapping;
+using iERP.Modules.CRM.Application.Opportunities.Services;
 using iERP.Modules.CRM.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddAutoMapper(cfg => cfg.AddMaps(typeof(CrmMappingProfile).Assembly));
         services.AddScoped<ILeadNumberGenerator, LeadNumberGenerator>();
+        services.AddScoped<IOpportunityNumberGenerator, OpportunityNumberGenerator>();
 
         return services;
     }

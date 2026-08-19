@@ -1,4 +1,6 @@
+using iERP.SharedKernel.Exceptions;
 using iERP.SharedKernel.Primitives;
+using iERP.SharedKernel.Time;
 
 namespace iERP.Modules.CRM.Domain;
 
@@ -144,6 +146,35 @@ public sealed class Lead : AuditableEntity
     }
 
     public void MarkDeleted(Guid? deletedBy, DateTimeOffset deletedAt) => SoftDelete(deletedBy, deletedAt);
+
+    public void MarkConverted(Guid opportunityId, DateTimeOffset convertedAt)
+    {
+        if (IsDeleted)
+        {
+            throw new BusinessRuleException(
+                ErrorCodes.BusinessRuleViolation,
+                "Deleted leads cannot be converted.");
+        }
+
+        if (ConvertedOpportunityId.HasValue ||
+            Status.Equals(LeadStatuses.Converted, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessRuleException(
+                ErrorCodes.BusinessRuleViolation,
+                "Lead has already been converted to an opportunity.");
+        }
+
+        if (Status.Equals(LeadStatuses.Unqualified, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessRuleException(
+                ErrorCodes.BusinessRuleViolation,
+                "Unqualified leads cannot be converted.");
+        }
+
+        ConvertedOpportunityId = opportunityId;
+        ConvertedAt = DateTimeOffsetUtc.Normalize(convertedAt);
+        Status = LeadStatuses.Converted;
+    }
 
     private void ApplyDetails(
         string companyName,
