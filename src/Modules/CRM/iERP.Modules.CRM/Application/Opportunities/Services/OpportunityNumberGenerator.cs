@@ -20,9 +20,10 @@ public sealed class OpportunityNumberGenerator : IOpportunityNumberGenerator
         var year = _clock.UtcNow.Year;
         var prefix = $"OPP-{year}-";
 
+        // Include soft-deleted rows: unique index still reserves opportunity_number.
         var last = await _db.Opportunities
             .IgnoreQueryFilters()
-            .Where(x => x.TenantId == tenantId && !x.IsDeleted && x.OpportunityNumber.StartsWith(prefix))
+            .Where(x => x.TenantId == tenantId && x.OpportunityNumber.StartsWith(prefix))
             .OrderByDescending(x => x.OpportunityNumber)
             .Select(x => x.OpportunityNumber)
             .FirstOrDefaultAsync(cancellationToken);

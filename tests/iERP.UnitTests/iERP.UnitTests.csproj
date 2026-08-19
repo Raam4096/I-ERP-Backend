@@ -8,9 +8,13 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="FluentValidation" />
     <PackageReference Include="coverlet.collector" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\iERP.SharedKernel\iERP.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\iERP.Infrastructure\iERP.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CRM\iERP.Modules.CRM\iERP.Modules.CRM.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Platform\iERP.Modules.Platform\iERP.Modules.Platform.csproj" />
   </ItemGroup>
 </Project>
