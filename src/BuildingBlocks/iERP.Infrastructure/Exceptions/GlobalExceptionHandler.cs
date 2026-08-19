@@ -45,6 +45,9 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             ForbiddenException fex => (
                 StatusCodes.Status403Forbidden,
                 ApiErrorResponse.Create(fex.ErrorCode, fex.Message)),
+            UnauthorizedException uex => (
+                StatusCodes.Status401Unauthorized,
+                ApiErrorResponse.Create(uex.ErrorCode, uex.Message)),
             BusinessRuleException brex => (
                 StatusCodes.Status409Conflict,
                 ApiErrorResponse.Create(brex.ErrorCode, brex.Message)),

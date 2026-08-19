@@ -32,6 +32,9 @@ using iERP.Modules.Marine;
 using iERP.Modules.Marine.Api;
 using iERP.Modules.Platform;
 using iERP.Modules.Platform.Api;
+using iERP.Modules.Platform.Identity.Application.Seeding;
+using iERP.Modules.Platform.Identity.Infrastructure;
+using iERP.Modules.Platform.Tenancy.Infrastructure;
 using iERP.Modules.Procurement;
 using iERP.Modules.Procurement.Api;
 using iERP.Modules.Projects;
@@ -42,6 +45,7 @@ using iERP.Modules.Sales;
 using iERP.Modules.Sales.Api;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +89,29 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "i-ERP API", Version = "v1" });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT access token from POST /api/v1/auth/login (without the 'Bearer ' prefix)."
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 var hangfireOptions = builder.Configuration.GetSection(HangfireOptions.SectionName).Get<HangfireOptions>() ?? new HangfireOptions();
@@ -110,8 +137,17 @@ var app = builder.Build();
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
+    var platformDb = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+    await platformDb.Database.MigrateAsync();
+
+    var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    await identityDb.Database.MigrateAsync();
+
     var crmDb = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
     await crmDb.Database.MigrateAsync();
+
+    var authSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentAuthSeeder>();
+    await authSeeder.SeedAsync();
 }
 
 app.UseExceptionHandler();

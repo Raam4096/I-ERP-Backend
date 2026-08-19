@@ -43,6 +43,7 @@ public static class DependencyInjection
             options.ReportingDatabase = configuration.GetConnectionString("ReportingDatabase") ?? string.Empty;
         });
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<AuthSeedOptions>(configuration.GetSection(AuthSeedOptions.SectionName));
         services.Configure<RedisOptions>(configuration.GetSection(RedisOptions.SectionName));
         services.Configure<AzureServiceBusOptions>(configuration.GetSection(AzureServiceBusOptions.SectionName));
         services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));

@@ -3,6 +3,7 @@ using iERP.SharedKernel.Primitives;
 using iERP.SharedKernel.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace iERP.Infrastructure.Persistence;
 
@@ -117,8 +118,40 @@ public static class ModelBuilderExtensions
             e.TenantId == TenantEfFilter.TenantId);
     }
 
+    /// <summary>
+    /// Ensures DateTimeOffset values are written as UTC (offset 0) for PostgreSQL timestamptz.
+    /// </summary>
+    public static void ApplyUtcDateTimeOffsetConversion(this ModelBuilder modelBuilder)
+    {
+        var dateTimeOffsetConverter = new ValueConverter<DateTimeOffset, DateTimeOffset>(
+            v => v.ToUniversalTime(),
+            v => v.ToUniversalTime());
+
+        var nullableDateTimeOffsetConverter = new ValueConverter<DateTimeOffset?, DateTimeOffset?>(
+            v => v.HasValue ? v.Value.ToUniversalTime() : v,
+            v => v.HasValue ? v.Value.ToUniversalTime() : v);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTimeOffset))
+                {
+                    property.SetValueConverter(dateTimeOffsetConverter);
+                }
+                else if (property.ClrType == typeof(DateTimeOffset?))
+                {
+                    property.SetValueConverter(nullableDateTimeOffsetConverter);
+                }
+            }
+        }
+    }
+
     public static void ConfigureMoneyPrecision(this ModelBuilder modelBuilder)
     {
+        // Applied here so every DbContext that already calls this method gets UTC safety.
+        modelBuilder.ApplyUtcDateTimeOffsetConversion();
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             foreach (var property in entityType.GetProperties())

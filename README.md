@@ -103,6 +103,8 @@ docs/
 - [Database migrations](docs/database-migrations.md)
 - [Architecture decisions](docs/architecture-decisions.md)
 - [UI API integration](docs/ui-api-integration.md)
+- [Frontend auth integration](docs/FRONTEND_AUTH_INTEGRATION.md)
+- [JWT auth implementation](docs/JWT_AUTH_IMPLEMENTATION.md)
 - [CRM lead management](docs/crm-lead-management.md)
 - [Generated plan](docs/generated-plan.md)
 
