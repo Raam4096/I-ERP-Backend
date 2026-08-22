@@ -77,7 +77,7 @@ builder.Services.AddCors(options =>
                       [
                           "http://localhost:3000",
                           "http://localhost:5173",
-                          "https://i-erp-dev-ui.vercel.app"
+                          "https://new-ierp.vercel.app"
                       ];
 
         policy.WithOrigins(origins)
