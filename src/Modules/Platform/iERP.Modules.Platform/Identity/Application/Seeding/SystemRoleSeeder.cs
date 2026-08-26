@@ -35,18 +35,32 @@ public sealed class SystemRoleSeeder : IDataSeeder
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
-        var existing = await _db.Roles
-            .Where(x => x.IsSystemRole)
-            .Select(x => x.Name)
+        // Include soft-deleted rows: unique index (tenant_id, name) still applies.
+        var existingRoles = await _db.Roles
+            .IgnoreQueryFilters()
+            .Where(x => x.TenantId == tenantId)
             .ToListAsync(cancellationToken);
-
-        var existingSet = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var byName = existingRoles
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.IsDeleted).First(), StringComparer.OrdinalIgnoreCase);
         var added = 0;
 
         foreach (var roleName in SystemRoles.All)
         {
-            if (existingSet.Contains(roleName))
+            if (byName.TryGetValue(roleName, out var existing))
             {
+                if (existing.IsDeleted)
+                {
+                    existing.IsDeleted = false;
+                    existing.DeletedAt = null;
+                    existing.DeletedBy = null;
+                }
+
+                if (!existing.IsSystemRole)
+                {
+                    existing.IsSystemRole = true;
+                }
+
                 continue;
             }
 
@@ -61,10 +75,13 @@ public sealed class SystemRoleSeeder : IDataSeeder
             added++;
         }
 
-        if (added > 0)
+        if (added > 0 || _db.ChangeTracker.HasChanges())
         {
             await _db.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Seeded {Count} system roles for tenant {TenantId}", added, tenantId);
+            if (added > 0)
+            {
+                _logger.LogInformation("Seeded {Count} system roles for tenant {TenantId}", added, tenantId);
+            }
         }
     }
 }
