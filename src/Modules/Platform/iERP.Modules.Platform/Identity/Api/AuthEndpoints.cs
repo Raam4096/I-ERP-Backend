@@ -2,6 +2,7 @@ using FluentValidation;
 using iERP.Modules.Platform.Identity.Application.Auth;
 using iERP.SharedKernel.Exceptions;
 using iERP.SharedKernel.Results;
+using iERP.SharedKernel.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,26 +14,35 @@ public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/auth")
+        var anonymous = app.MapGroup("/api/v1/auth")
             .WithTags("Auth")
             .AllowAnonymous();
 
-        group.MapPost("/login", LoginAsync)
+        anonymous.MapPost("/login", LoginAsync)
             .WithName("Login")
             .Produces<ApiResponse<AuthTokenResponse>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized);
 
-        group.MapPost("/refresh", RefreshAsync)
+        anonymous.MapPost("/refresh", RefreshAsync)
             .WithName("RefreshToken")
             .Produces<ApiResponse<AuthTokenResponse>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized);
 
-        group.MapPost("/logout", LogoutAsync)
+        anonymous.MapPost("/logout", LogoutAsync)
             .WithName("Logout")
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+
+        var authorized = app.MapGroup("/api/v1/auth")
+            .WithTags("Auth")
+            .RequireAuthorization();
+
+        authorized.MapGet("/me", MeAsync)
+            .WithName("GetCurrentUser")
+            .Produces<ApiResponse<AuthUserDto>>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized);
 
         return app;
     }
@@ -68,6 +78,20 @@ public static class AuthEndpoints
         await ValidateAsync(validator, request, cancellationToken);
         await authService.LogoutAsync(request, cancellationToken);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> MeAsync(
+        ICurrentUser currentUser,
+        IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || currentUser.UserId is null)
+        {
+            throw new UnauthorizedException();
+        }
+
+        var user = await authService.GetCurrentUserAsync(currentUser.UserId.Value, cancellationToken);
+        return Results.Ok(ApiResponse<AuthUserDto>.Ok(user));
     }
 
     private static async Task ValidateAsync<T>(

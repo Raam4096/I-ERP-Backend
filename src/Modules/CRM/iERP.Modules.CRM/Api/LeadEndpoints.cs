@@ -17,68 +17,81 @@ public static class LeadEndpoints
 {
     public static IEndpointRouteBuilder MapLeadEndpoints(this IEndpointRouteBuilder app)
     {
-        var leads = app.MapGroup("/api/crm/leads")
-            .WithTags("CRM Leads")
+        // Existing UI path — do not remove (deployed clients).
+        MapLeadGroup(app, "/api/crm/leads", "/api/crm/followups", "CRM Leads", "CRM FollowUps", string.Empty);
+        // ProcessFlow v4 versioned alias.
+        MapLeadGroup(app, "/api/v1/crm/leads", "/api/v1/crm/followups", "CRM Leads v1", "CRM FollowUps v1", "V1");
+        return app;
+    }
+
+    private static void MapLeadGroup(
+        IEndpointRouteBuilder app,
+        string leadsPrefix,
+        string followUpsPrefix,
+        string leadsTag,
+        string followUpsTag,
+        string nameSuffix)
+    {
+        var leads = app.MapGroup(leadsPrefix)
+            .WithTags(leadsTag)
             .RequireAuthorization();
 
         leads.MapPost("/", CreateLeadAsync)
-            .WithName("CreateLead")
+            .WithName("CreateLead" + nameSuffix)
             .Produces<ApiResponse<LeadDto>>(StatusCodes.Status201Created)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         leads.MapGet("/", GetLeadsAsync)
-            .WithName("GetLeads")
+            .WithName("GetLeads" + nameSuffix)
             .Produces<PagedResponse<LeadDto>>(StatusCodes.Status200OK);
 
         leads.MapGet("/{id:guid}", GetLeadByIdAsync)
-            .WithName("GetLeadById")
+            .WithName("GetLeadById" + nameSuffix)
             .Produces<ApiResponse<LeadDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         leads.MapPut("/{id:guid}", UpdateLeadAsync)
-            .WithName("UpdateLead")
+            .WithName("UpdateLead" + nameSuffix)
             .Produces<ApiResponse<LeadDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         leads.MapDelete("/{id:guid}", DeleteLeadAsync)
-            .WithName("DeleteLead")
+            .WithName("DeleteLead" + nameSuffix)
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         leads.MapPost("/{leadId:guid}/convert-to-opportunity", ConvertToOpportunityAsync)
-            .WithName("ConvertLeadToOpportunity")
+            .WithName("ConvertLeadToOpportunity" + nameSuffix)
             .Produces<ApiResponse<OpportunityDto>>(StatusCodes.Status201Created)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         leads.MapPost("/{leadId:guid}/followups", CreateFollowUpAsync)
-            .WithName("CreateLeadFollowUp")
+            .WithName("CreateLeadFollowUp" + nameSuffix)
             .Produces<ApiResponse<LeadFollowUpDto>>(StatusCodes.Status201Created)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         leads.MapGet("/{leadId:guid}/timeline", GetTimelineAsync)
-            .WithName("GetLeadTimeline")
+            .WithName("GetLeadTimeline" + nameSuffix)
             .Produces<ApiResponse<IReadOnlyList<LeadFollowUpDto>>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         leads.MapGet("/{leadId:guid}/history", GetLeadHistoryAsync)
-            .WithName("GetLeadHistory")
+            .WithName("GetLeadHistory" + nameSuffix)
             .Produces<ApiResponse<IReadOnlyList<CrmHistoryItemDto>>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        var followUps = app.MapGroup("/api/crm/followups")
-            .WithTags("CRM FollowUps")
+        var followUps = app.MapGroup(followUpsPrefix)
+            .WithTags(followUpsTag)
             .RequireAuthorization();
 
         followUps.MapPut("/{id:guid}", UpdateFollowUpAsync)
-            .WithName("UpdateFollowUp")
+            .WithName("UpdateFollowUp" + nameSuffix)
             .Produces<ApiResponse<LeadFollowUpDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-
-        return app;
     }
 
     private static async Task<IResult> CreateLeadAsync(

@@ -16,11 +16,38 @@ React UI
   → POST /api/v1/auth/login  (tenantCode + email + password)
   → store accessToken + refreshToken securely
   → call APIs with Authorization: Bearer <accessToken>
+  → on reload: GET /api/v1/auth/me with Bearer to restore user/roles
   → on 401: POST /api/v1/auth/refresh with refreshToken (once), retry
   → logout: POST /api/v1/auth/logout with refreshToken, clear storage
 ```
 
 Do **not** put tokens in localStorage if you can use memory + httpOnly cookies later. For the current API (Bearer body refresh, no cookies), memory or sessionStorage is typical for SPA demos.
+
+---
+
+## Current user (`/me`) — ProcessFlow v4
+
+`GET /api/v1/auth/me`  
+**Requires** `Authorization: Bearer <accessToken>`
+
+### Success `200`
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "tenantId": "...",
+    "email": "admin@ierp.local",
+    "userName": "admin@ierp.local",
+    "displayName": "Demo Admin",
+    "roles": ["Super Admin"]
+  },
+  "message": null
+}
+```
+
+Use this after login/refresh and on app boot to restore session profile.
 
 ---
 

@@ -96,13 +96,13 @@ public sealed class DevelopmentAuthSeeder
         }
 
         var role = await _identityDb.Roles
-            .FirstOrDefaultAsync(x => x.Name == SystemRoles.TenantAdmin, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Name == SystemRoles.SuperAdmin, cancellationToken);
         if (role is null)
         {
             role = new AppRole
             {
-                Name = SystemRoles.TenantAdmin,
-                Description = "Tenant administrator",
+                Name = SystemRoles.SuperAdmin,
+                Description = "Tenant super administrator",
                 IsSystemRole = true
             };
             role.SetTenantId(tenant.Id);

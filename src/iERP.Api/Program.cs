@@ -34,7 +34,9 @@ using iERP.Modules.Platform;
 using iERP.Modules.Platform.Api;
 using iERP.Modules.Platform.Identity.Application.Seeding;
 using iERP.Modules.Platform.Identity.Infrastructure;
+using iERP.Modules.Platform.Metadata.Infrastructure;
 using iERP.Modules.Platform.Tenancy.Infrastructure;
+using iERP.Application.Abstractions.Seeding;
 using iERP.Modules.Procurement;
 using iERP.Modules.Procurement.Api;
 using iERP.Modules.Projects;
@@ -143,11 +145,20 @@ await using (var scope = app.Services.CreateAsyncScope())
     var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await identityDb.Database.MigrateAsync();
 
+    var metadataDb = scope.ServiceProvider.GetRequiredService<MetadataDbContext>();
+    await metadataDb.Database.MigrateAsync();
+
     var crmDb = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
     await crmDb.Database.MigrateAsync();
 
     var authSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentAuthSeeder>();
     await authSeeder.SeedAsync();
+
+    // ProcessFlow v4: system roles + CRM GenericPage metadata for the seeded tenant.
+    foreach (var seeder in scope.ServiceProvider.GetServices<IDataSeeder>())
+    {
+        await seeder.SeedAsync();
+    }
 }
 
 app.UseExceptionHandler();
