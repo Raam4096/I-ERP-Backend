@@ -57,8 +57,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL; // or NEXT_PUBLIC_...
 
 const defaultHeaders: HeadersInit = {
   "Content-Type": "application/json",
-  "X-Tenant-Id": "11111111-1111-1111-1111-111111111111",
-  "X-User-Id": "22222222-2222-2222-2222-222222222222",
+  // Prefer: Authorization: Bearer <accessToken> from login
+  // Dev-only alternative: X-Tenant-Id must be the real tenant GUID from platform.tenants
 };
 
 export async function apiFetch(path: string, init?: RequestInit) {
@@ -99,14 +99,14 @@ JWT claims used by the API:
 
 ### Temporary Development header auth (local only)
 
-When Development and **no** `Authorization` header is sent:
+When Development and **no** `Authorization` header is sent, you may send:
 
 | Header | Required? | Description |
 |--------|-----------|-------------|
-| `X-Tenant-Id` | Optional | Tenant GUID (defaults applied if omitted) |
+| `X-Tenant-Id` | **Required** for header auth | Must be the **real** tenant GUID from `platform.tenants` (same as metadata `tenant_id`) |
 | `X-User-Id` | Optional | User GUID |
 
-Default GUIDs: tenant `11111111-...1111`, user `22222222-...2222`.
+There is **no** fake default tenant anymore (that caused empty module lists). Prefer JWT Authorize in Swagger.
 
 Do not use header auth for the Vercel UI once JWT is wired.
 

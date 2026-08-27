@@ -166,7 +166,10 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors("Ui");
 
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Environment.IsDevelopment()
+    || builder.Configuration.GetValue("Swagger:Enabled", false);
+
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();

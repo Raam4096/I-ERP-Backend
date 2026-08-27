@@ -400,7 +400,28 @@ Shared pieces:
 
 ---
 
-## 9. Related APIs (cheat sheet)
+## 10. Troubleshooting: modules empty in Swagger but rows exist in DB
+
+Metadata is **tenant-scoped**. `GET /api/v1/metadata/modules` only returns rows where `tenant_id` matches the JWT `tenant_id` claim.
+
+### Correct Swagger flow
+
+1. `POST /api/v1/auth/login` with your Railway tenant (`tenantCode`, email, password).
+2. Copy `data.accessToken`.
+3. Click **Authorize** → paste token **without** the `Bearer ` prefix → Authorize.
+4. Call `GET /api/v1/metadata/modules`.
+5. Optional check: `GET /api/v1/auth/me` and confirm tenant matches DB:
+   ```sql
+   SELECT tenant_id, code, name FROM metadata.module_definitions WHERE NOT is_deleted;
+   ```
+
+### Why it looked empty before
+
+If Swagger ran in Development **without** Authorize, the API used a fake tenant `11111111-...` that has **no** seeded metadata → `data: []` even though real tenant rows exist in the DB.
+
+Fix (deployed with this change): no fake default tenant; without JWT you get **401** instead of a silent empty list.
+
+On Railway Production, set `Swagger__Enabled=true` if you need Swagger outside Development.
 
 | Area | Endpoints |
 |------|-----------|
