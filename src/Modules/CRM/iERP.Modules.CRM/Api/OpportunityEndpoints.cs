@@ -16,19 +16,11 @@ public static class OpportunityEndpoints
     {
         MapOpportunityGroup(
             app,
-            "/api/crm/opportunities",
-            "/api/crm/opportunity-followups",
+            "/api/v1/crm/opportunities",
+            "/api/v1/crm/opportunity-followups",
             "CRM Opportunities",
             "CRM Opportunity FollowUps",
             string.Empty);
-
-        MapOpportunityGroup(
-            app,
-            "/api/v1/crm/opportunities",
-            "/api/v1/crm/opportunity-followups",
-            "CRM Opportunities v1",
-            "CRM Opportunity FollowUps v1",
-            "V1");
 
         return app;
     }
@@ -180,7 +172,7 @@ public static class OpportunityEndpoints
             new CreateOpportunityFollowUpCommand(opportunityId, request),
             cancellationToken);
         return Results.Created(
-            $"/api/crm/opportunity-followups/{result.Id}",
+            $"/api/v1/crm/opportunity-followups/{result.Id}",
             ApiResponse<OpportunityFollowUpDto>.Ok(result, "Follow-up created successfully."));
     }
 

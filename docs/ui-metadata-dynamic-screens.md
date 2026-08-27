@@ -214,7 +214,7 @@ function DynamicForm({ page }: { page: GenericPage }) {
 
 ### A) Hybrid CRM lead (core + custom fields)
 
-Use existing lead APIs (`/api/crm/leads` or `/api/v1/crm/leads`).
+Use existing lead APIs (`/api/v1/crm/leads`).
 
 Create / update may include optional:
 
@@ -410,5 +410,5 @@ Shared pieces:
 | Custom fields | `GET/POST /api/v1/metadata/entities/{entityName}/custom-fields`, `PUT/DELETE /api/v1/metadata/custom-fields/{id}` |
 | Dynamic architect | `/api/v1/dynamic_modules/...` |
 | Dynamic data | `/api/v1/dynamic_modules/entities/{id}/records` |
-| CRM leads | `/api/crm/leads` or `/api/v1/crm/leads` |
+| CRM leads | `/api/v1/crm/leads` |
 | Me | `GET /api/v1/auth/me` |

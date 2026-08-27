@@ -1,7 +1,7 @@
 # ProcessFlow v4 alignment (feature branch)
 
 Branch: `feature/processflow-v4-alignment`  
-Goal: align with client ProcessFlow v4 **without breaking** deployed CRM on `/api/crm/*`.
+Goal: align with client ProcessFlow v4 using versioned `/api/v1/*` routes.
 
 ## Shipped in this branch (additive)
 
@@ -9,10 +9,10 @@ Goal: align with client ProcessFlow v4 **without breaking** deployed CRM on `/ap
 |--------|--------|
 | `GET /api/v1/auth/me` | Returns current user + roles for UI session restore |
 | `GET /api/v1/metadata/screens/{screenCode}` | GenericPage contract; merges core + custom fields |
-| Metadata migrate + seed | Seeds CRM module + `crm-leads` screen on AuthSeed tenant |
-| System roles seed | All 10 ProcessFlow system roles for tenant |
+| Metadata migrate + seed | Seeds CRM module + `crm-leads` / `crm-opportunities` for all tenants |
+| System roles seed | All 10 ProcessFlow system roles for every tenant |
 | Dev admin role | Seeded admin assigned **Super Admin** (in-tenant) |
-| CRM dual routes | `/api/crm/*` **kept**; aliases added under `/api/v1/crm/*` |
+| CRM routes | **`/api/v1/crm/*` only** (legacy `/api/crm/*` removed) |
 | Dynamic Modules Screen Architect APIs | CRUD for modules → entities (screens) → fields; CRUD for `dynamic_records` (`payload_json`) |
 | Metadata modules bootstrap | `GET /api/v1/metadata/modules` (metadata + dynamic nav tree) |
 | Per-user field prefs | `PUT /api/v1/metadata/screens/{code}/preferences`; merged into screen/entity GET |
@@ -21,8 +21,7 @@ Goal: align with client ProcessFlow v4 **without breaking** deployed CRM on `/ap
 
 ## Compatibility
 
-- Existing UI on `/api/crm/leads` and `/api/crm/opportunities` continues to work.
-- New UI / ProcessFlow clients can adopt `/api/v1/...` gradually.
+- UI should call **`/api/v1/crm/...`** only (not `/api/crm/...`).
 - Refresh token remains **body JSON** (SPA-friendly); HttpOnly cookie is a later option.
 
 ## UI notes
