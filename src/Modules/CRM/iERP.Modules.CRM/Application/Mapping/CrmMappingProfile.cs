@@ -12,7 +12,8 @@ public sealed class CrmMappingProfile : Profile
         CreateMap<LeadAttachment, LeadAttachmentDto>();
         CreateMap<LeadFollowUp, LeadFollowUpDto>();
         CreateMap<Lead, LeadDto>()
-            .ForMember(d => d.FollowUps, opt => opt.MapFrom(s => s.FollowUps));
+            .ForMember(d => d.FollowUps, opt => opt.MapFrom(s => s.FollowUps))
+            .ForMember(d => d.CustomFields, opt => opt.Ignore());
 
         CreateMap<OpportunityFollowUp, OpportunityFollowUpDto>();
         CreateMap<Opportunity, OpportunityDto>()

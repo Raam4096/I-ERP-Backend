@@ -1,4 +1,5 @@
 using AutoMapper;
+using iERP.Application.Abstractions.Metadata;
 using iERP.Modules.CRM.Application.Leads.Dtos;
 using iERP.Modules.CRM.Infrastructure;
 using iERP.SharedKernel.Exceptions;
@@ -16,17 +17,20 @@ public sealed class UpdateLeadCommandHandler : IRequestHandler<UpdateLeadCommand
     private readonly CrmDbContext _db;
     private readonly IMapper _mapper;
     private readonly ICurrentUser _currentUser;
+    private readonly ICustomFieldValueStore _customFieldValueStore;
     private readonly ILogger<UpdateLeadCommandHandler> _logger;
 
     public UpdateLeadCommandHandler(
         CrmDbContext db,
         IMapper mapper,
         ICurrentUser currentUser,
+        ICustomFieldValueStore customFieldValueStore,
         ILogger<UpdateLeadCommandHandler> logger)
     {
         _db = db;
         _mapper = mapper;
         _currentUser = currentUser;
+        _customFieldValueStore = customFieldValueStore;
         _logger = logger;
     }
 
@@ -69,7 +73,22 @@ public sealed class UpdateLeadCommandHandler : IRequestHandler<UpdateLeadCommand
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        if (request.CustomFields is not null)
+        {
+            await _customFieldValueStore.UpsertValuesAsync(
+                LeadMetadata.EntityName,
+                lead.Id,
+                request.CustomFields,
+                cancellationToken);
+        }
+
         _logger.LogInformation("Lead updated {LeadId} by {UserId}", lead.Id, _currentUser.UserId);
-        return _mapper.Map<LeadDto>(lead);
+
+        var dto = _mapper.Map<LeadDto>(lead);
+        var customFields = await _customFieldValueStore.GetValuesAsync(
+            LeadMetadata.EntityName,
+            lead.Id,
+            cancellationToken);
+        return dto with { CustomFields = customFields.Count > 0 ? customFields : null };
     }
 }

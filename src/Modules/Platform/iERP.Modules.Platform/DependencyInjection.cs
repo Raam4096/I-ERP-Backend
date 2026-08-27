@@ -1,4 +1,5 @@
 using FluentValidation;
+using iERP.Application.Abstractions.Metadata;
 using iERP.Application.Abstractions.Options;
 using iERP.Application.Abstractions.Seeding;
 using iERP.Infrastructure.Persistence.Interceptors;
@@ -6,6 +7,8 @@ using iERP.Modules.Platform.Identity.Application.Auth;
 using iERP.Modules.Platform.Identity.Application.Seeding;
 using iERP.Modules.Platform.Identity.Domain;
 using iERP.Modules.Platform.Identity.Infrastructure;
+using iERP.Modules.Platform.DynamicModules.Application;
+using iERP.Modules.Platform.Metadata.Application;
 using iERP.Modules.Platform.Metadata.Application.Seeding;
 using iERP.Modules.Platform.Metadata.Infrastructure;
 using iERP.Modules.Platform.Organization.Infrastructure;
@@ -61,6 +64,12 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IMetadataScreenService, MetadataScreenService>();
+        services.AddScoped<IMetadataCatalogService, MetadataCatalogService>();
+        services.AddScoped<IUserFieldPreferenceService, UserFieldPreferenceService>();
+        services.AddScoped<ICustomFieldDefinitionService, CustomFieldDefinitionService>();
+        services.AddScoped<ICustomFieldValueStore, CustomFieldValueStore>();
+        services.AddScoped<IDynamicModulesService, DynamicModulesService>();
         services.AddScoped<DevelopmentAuthSeeder>();
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

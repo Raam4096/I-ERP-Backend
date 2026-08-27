@@ -14,63 +14,88 @@ public static class OpportunityEndpoints
 {
     public static IEndpointRouteBuilder MapOpportunityEndpoints(this IEndpointRouteBuilder app)
     {
-        var opportunities = app.MapGroup("/api/crm/opportunities")
-            .WithTags("CRM Opportunities")
+        MapOpportunityGroup(
+            app,
+            "/api/crm/opportunities",
+            "/api/crm/opportunity-followups",
+            "CRM Opportunities",
+            "CRM Opportunity FollowUps",
+            string.Empty);
+
+        MapOpportunityGroup(
+            app,
+            "/api/v1/crm/opportunities",
+            "/api/v1/crm/opportunity-followups",
+            "CRM Opportunities v1",
+            "CRM Opportunity FollowUps v1",
+            "V1");
+
+        return app;
+    }
+
+    private static void MapOpportunityGroup(
+        IEndpointRouteBuilder app,
+        string opportunitiesPrefix,
+        string followUpsPrefix,
+        string opportunitiesTag,
+        string followUpsTag,
+        string nameSuffix)
+    {
+        var opportunities = app.MapGroup(opportunitiesPrefix)
+            .WithTags(opportunitiesTag)
             .RequireAuthorization();
 
         opportunities.MapGet("/", GetOpportunitiesAsync)
-            .WithName("GetOpportunities")
+            .WithName("GetOpportunities" + nameSuffix)
             .Produces<PagedResponse<OpportunityDto>>(StatusCodes.Status200OK);
 
         opportunities.MapGet("/{id:guid}", GetOpportunityByIdAsync)
-            .WithName("GetOpportunityById")
+            .WithName("GetOpportunityById" + nameSuffix)
             .Produces<ApiResponse<OpportunityDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         opportunities.MapPut("/{id:guid}", UpdateOpportunityAsync)
-            .WithName("UpdateOpportunity")
+            .WithName("UpdateOpportunity" + nameSuffix)
             .Produces<ApiResponse<OpportunityDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         opportunities.MapPost("/{id:guid}/discard", DiscardOpportunityAsync)
-            .WithName("DiscardOpportunity")
+            .WithName("DiscardOpportunity" + nameSuffix)
             .Produces<ApiResponse<OpportunityDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         opportunities.MapPost("/{id:guid}/restore", RestoreOpportunityAsync)
-            .WithName("RestoreOpportunity")
+            .WithName("RestoreOpportunity" + nameSuffix)
             .Produces<ApiResponse<OpportunityDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
 
         opportunities.MapDelete("/{id:guid}", DeleteOpportunityAsync)
-            .WithName("DeleteOpportunity")
+            .WithName("DeleteOpportunity" + nameSuffix)
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         opportunities.MapPost("/{opportunityId:guid}/followups", CreateFollowUpAsync)
-            .WithName("CreateOpportunityFollowUp")
+            .WithName("CreateOpportunityFollowUp" + nameSuffix)
             .Produces<ApiResponse<OpportunityFollowUpDto>>(StatusCodes.Status201Created)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         opportunities.MapGet("/{opportunityId:guid}/timeline", GetTimelineAsync)
-            .WithName("GetOpportunityTimeline")
+            .WithName("GetOpportunityTimeline" + nameSuffix)
             .Produces<ApiResponse<IReadOnlyList<OpportunityFollowUpDto>>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        var followUps = app.MapGroup("/api/crm/opportunity-followups")
-            .WithTags("CRM Opportunity FollowUps")
+        var followUps = app.MapGroup(followUpsPrefix)
+            .WithTags(followUpsTag)
             .RequireAuthorization();
 
         followUps.MapPut("/{id:guid}", UpdateFollowUpAsync)
-            .WithName("UpdateOpportunityFollowUp")
+            .WithName("UpdateOpportunityFollowUp" + nameSuffix)
             .Produces<ApiResponse<OpportunityFollowUpDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-
-        return app;
     }
 
     private static async Task<IResult> GetOpportunitiesAsync(

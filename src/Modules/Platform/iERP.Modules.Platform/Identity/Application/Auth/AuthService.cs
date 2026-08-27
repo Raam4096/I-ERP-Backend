@@ -19,6 +19,7 @@ public interface IAuthService
     Task<AuthTokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
     Task<AuthTokenResponse> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken);
     Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken);
+    Task<AuthUserDto> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 public sealed class AuthService : IAuthService
@@ -156,6 +157,32 @@ public sealed class AuthService : IAuthService
             existing.RevokedAt = _clock.UtcNow;
             await _identityDb.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    public async Task<AuthUserDto> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new UnauthorizedException("Tenant context is required.");
+        }
+
+        var user = await _identityDb.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+
+        if (user is null || !user.IsActive)
+        {
+            throw new UnauthorizedException(InvalidCredentialsMessage);
+        }
+
+        var roles = await LoadRoleNamesAsync(user.Id, cancellationToken);
+        return new AuthUserDto(
+            user.Id,
+            _tenantContext.TenantId!.Value,
+            user.Email,
+            user.UserName,
+            user.DisplayName,
+            roles);
     }
 
     private async Task<IReadOnlyList<string>> LoadRoleNamesAsync(Guid userId, CancellationToken cancellationToken)

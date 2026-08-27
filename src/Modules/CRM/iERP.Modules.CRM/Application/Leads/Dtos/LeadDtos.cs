@@ -45,7 +45,8 @@ public sealed record LeadDto(
     DateTimeOffset? UpdatedAt,
     Guid? UpdatedBy,
     long Version,
-    IReadOnlyList<LeadFollowUpDto>? FollowUps = null);
+    IReadOnlyList<LeadFollowUpDto>? FollowUps = null,
+    IReadOnlyDictionary<string, object?>? CustomFields = null);
 
 public sealed record AttachmentInputDto(
     string FileName,
@@ -79,7 +80,8 @@ public sealed record CreateLeadRequest(
     Guid? SubsidiaryId,
     string? Website,
     string? Notes,
-    FollowUpInputDto? FollowUp);
+    FollowUpInputDto? FollowUp,
+    IReadOnlyDictionary<string, object?>? CustomFields = null);
 
 public sealed record UpdateLeadRequest(
     string CompanyName,
@@ -98,7 +100,8 @@ public sealed record UpdateLeadRequest(
     string? Subsidiary,
     Guid? SubsidiaryId,
     string? Website,
-    string? Notes);
+    string? Notes,
+    IReadOnlyDictionary<string, object?>? CustomFields = null);
 
 public sealed record CreateFollowUpRequest(
     string ActivityType,

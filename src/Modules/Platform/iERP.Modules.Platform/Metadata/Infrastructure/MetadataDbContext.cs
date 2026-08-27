@@ -20,6 +20,7 @@ public sealed class MetadataDbContext : DbContext
     public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
+    public DbSet<UserFieldPreference> UserFieldPreferences => Set<UserFieldPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

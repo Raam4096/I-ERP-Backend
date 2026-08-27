@@ -1,4 +1,5 @@
 using AutoMapper;
+using iERP.Application.Abstractions.Metadata;
 using iERP.Modules.CRM.Application.Leads.Dtos;
 using iERP.Modules.CRM.Application.Leads.Services;
 using iERP.Modules.CRM.Domain;
@@ -23,6 +24,7 @@ public sealed class CreateLeadCommandHandler : IRequestHandler<CreateLeadCommand
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
     private readonly IMapper _mapper;
+    private readonly ICustomFieldValueStore _customFieldValueStore;
     private readonly ILogger<CreateLeadCommandHandler> _logger;
 
     public CreateLeadCommandHandler(
@@ -32,6 +34,7 @@ public sealed class CreateLeadCommandHandler : IRequestHandler<CreateLeadCommand
         ICurrentUser currentUser,
         IClock clock,
         IMapper mapper,
+        ICustomFieldValueStore customFieldValueStore,
         ILogger<CreateLeadCommandHandler> logger)
     {
         _db = db;
@@ -40,6 +43,7 @@ public sealed class CreateLeadCommandHandler : IRequestHandler<CreateLeadCommand
         _currentUser = currentUser;
         _clock = clock;
         _mapper = mapper;
+        _customFieldValueStore = customFieldValueStore;
         _logger = logger;
     }
 
@@ -113,12 +117,25 @@ public sealed class CreateLeadCommandHandler : IRequestHandler<CreateLeadCommand
         _db.Leads.Add(lead);
         await _db.SaveChangesAsync(cancellationToken);
 
+        if (request.CustomFields is { Count: > 0 })
+        {
+            await _customFieldValueStore.UpsertValuesAsync(
+                LeadMetadata.EntityName,
+                lead.Id,
+                request.CustomFields,
+                cancellationToken);
+        }
+
         _logger.LogInformation(
             "Lead created {LeadId} {LeadNumber} by {UserId}",
             lead.Id,
             lead.LeadNumber,
             _currentUser.UserId);
 
-        return _mapper.Map<LeadDto>(lead);
+        var dto = _mapper.Map<LeadDto>(lead);
+        var customFields = request.CustomFields is { Count: > 0 }
+            ? await _customFieldValueStore.GetValuesAsync(LeadMetadata.EntityName, lead.Id, cancellationToken)
+            : null;
+        return dto with { CustomFields = customFields };
     }
 }
