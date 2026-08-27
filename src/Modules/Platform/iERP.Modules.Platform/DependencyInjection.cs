@@ -6,6 +6,7 @@ using iERP.Modules.Platform.Identity.Application.Auth;
 using iERP.Modules.Platform.Identity.Application.Seeding;
 using iERP.Modules.Platform.Identity.Domain;
 using iERP.Modules.Platform.Identity.Infrastructure;
+using iERP.Modules.Platform.DynamicModules.Application;
 using iERP.Modules.Platform.Metadata.Application;
 using iERP.Modules.Platform.Metadata.Application.Seeding;
 using iERP.Modules.Platform.Metadata.Infrastructure;
@@ -63,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMetadataScreenService, MetadataScreenService>();
+        services.AddScoped<IDynamicModulesService, DynamicModulesService>();
         services.AddScoped<DevelopmentAuthSeeder>();
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
