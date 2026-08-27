@@ -4,6 +4,9 @@ Guide for frontend developers calling the i-ERP backend (CRM Lead APIs and healt
 
 Related backend detail: [crm-lead-management.md](./crm-lead-management.md)
 
+**Metadata-driven UI / Screen Architect / per-user field layout:**  
+→ **[ui-metadata-dynamic-screens.md](./ui-metadata-dynamic-screens.md)** (share this with UI for ProcessFlow GenericPage work)
+
 ---
 
 ## 1. Base URLs
@@ -311,7 +314,10 @@ Lead numbers look like `LEAD-2026-000001`.
 
 - Full user administration APIs (invite/reset password UI flows)
 - Real binary file upload to blob storage  
-- Lead → Opportunity conversion  
 - Permission-policy authorization on every module endpoint  
+- Dynamic module **sections** (group fields client-side for now)
 
 Login / refresh / logout JWT APIs **are available** — see [FRONTEND_AUTH_INTEGRATION.md](./FRONTEND_AUTH_INTEGRATION.md).
+
+Lead → Opportunity APIs **are available** under `/api/crm/opportunities` (and `/api/v1/crm/...`).  
+Dynamic modules + metadata prefs — see [ui-metadata-dynamic-screens.md](./ui-metadata-dynamic-screens.md).
