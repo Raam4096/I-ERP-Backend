@@ -9,7 +9,7 @@ public static class CrmEndpoints
 {
     public static IEndpointRouteBuilder MapCrmEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/leads").WithTags("Crm");
+        var group = app.MapGroup("/api/v1/crm").WithTags("Crm");
         group.MapGet("/health", () => Results.Ok(ApiResponse<string>.Ok("Crm module ready")))
             .WithName("CrmHealth");
         return app;

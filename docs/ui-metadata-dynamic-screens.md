@@ -1,0 +1,414 @@
+# UI guide: Metadata-driven screens, Screen Architect & per-user layout
+
+Share this with frontend developers integrating **ProcessFlow-style** dynamic UI against branch `feature/processflow-v4-alignment`.
+
+Auth / base URL / CORS: see [ui-api-integration.md](./ui-api-integration.md) and [FRONTEND_AUTH_INTEGRATION.md](./FRONTEND_AUTH_INTEGRATION.md).
+
+All paths below need:
+
+```http
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+---
+
+## Mental model (how UI should think)
+
+```
+App boot
+  → GET modules          → build navbar tabs
+Open a screen
+  → GET screen schema    → render form/grid dynamically (do NOT hardcode fields)
+User edits / hides / reorders fields
+  → PUT preferences      → per-user only
+User saves data
+  → call apiBasePath     → CRM lead APIs OR dynamic records
+```
+
+| Concept | Backend | UI |
+|---------|---------|-----|
+| Module | Navbar tab | One nav item |
+| Screen | Page under module | Route + form |
+| Section | Group of fields | Fieldset / accordion |
+| Field | Input definition | Control by `controlType` / `dataType` |
+| Custom field | Extra field on Hybrid screen | Same renderer; `isCustom: true` |
+| Dynamic module | Fully custom module | Same navbar; data via `/dynamic_modules/.../records` |
+
+---
+
+## 1. App boot — navbar from backend (one API only)
+
+**Use this for navbar — includes predefined CRM + any Screen Architect modules:**
+
+```http
+GET /api/v1/metadata/modules?activeOnly=true
+```
+
+Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that returns **only** custom (dynamic) modules. The metadata modules call already merges both.
+
+| `source` | Meaning | Example |
+|----------|---------|---------|
+| `"metadata"` | Predefined / Hybrid (seeded) | CRM → screen `crm-leads` |
+| `"dynamic"` | Created in Screen Architect | Any custom module |
+
+Today’s seeded predefined module (after API restart on any environment, including Railway):
+
+| Module code | Screen code | Route | Data API |
+|-------------|-------------|-------|----------|
+| `crm` | `crm-leads` | `/crm/leads` | `/api/v1/crm/leads` |
+| `crm` | `crm-opportunities` | `/crm/opportunities` | `/api/v1/crm/opportunities` |
+
+Seeder runs on **startup for every tenant** in the DB (not only local AuthSeed). Redeploy/restart Railway API once after this change so empty Railway metadata is filled.
+
+So the UI developer does **not** hardcode CRM in the nav. CRM appears in the same list as new modules.
+
+Response `data[]` shape:
+
+```json
+{
+  "id": "...",
+  "code": "crm",
+  "name": "CRM",
+  "source": "metadata",
+  "isActive": true,
+  "screens": [
+    {
+      "id": "...",
+      "code": "crm-leads",
+      "name": "CRM Leads",
+      "route": "/crm/leads",
+      "entityName": "crm-leads",
+      "apiBasePath": "/api/v1/crm/leads"
+    }
+  ]
+}
+```
+
+`source` is `"metadata"` (core/Hybrid) or `"dynamic"` (Screen Architect modules).
+
+### UI logic
+
+```ts
+// On login / app shell mount
+const { data: modules } = await api.get("/api/v1/metadata/modules?activeOnly=true");
+
+// Navbar = modules
+modules.forEach(m => addNavTab({ key: m.code, label: m.name, children: m.screens }));
+
+// Route map
+// metadata screen  →  m.screens[].route  (e.g. /crm/leads)
+// dynamic screen   →  /dynamic/{moduleCode}/{entityName}  (or use screens[].route from API)
+```
+
+Do **not** hardcode CRM-only nav if you want Screen Architect modules to appear automatically.
+
+Optional session restore:
+
+```http
+GET /api/v1/auth/me
+```
+
+---
+
+## 2. Open screen — load schema, render dynamically
+
+### Hybrid / seeded screens (e.g. CRM Leads)
+
+```http
+GET /api/v1/metadata/screens/crm-leads
+```
+
+Returns **GenericPage** (already merges custom fields + **current user’s** hide/order prefs):
+
+```json
+{
+  "screen": {
+    "code": "crm-leads",
+    "name": "CRM Leads",
+    "route": "/crm/leads",
+    "renderMode": "generic",
+    "entityName": "crm-leads",
+    "apiBasePath": "/api/v1/crm/leads"
+  },
+  "layout": { "mode": "form-with-grid", "columns": 12 },
+  "sections": [
+    {
+      "code": "main",
+      "title": "Lead Details",
+      "type": "header",
+      "fields": [
+        {
+          "fieldKey": "companyName",
+          "label": "Company Name",
+          "dataType": "string",
+          "controlType": "input",
+          "required": true,
+          "readOnly": false,
+          "visible": true,
+          "width": 3,
+          "displayOrder": 1,
+          "isCustom": false
+        }
+      ]
+    }
+  ],
+  "actions": [
+    { "actionKey": "save", "label": "Save", "actionType": "api", "endpoint": "/api/v1/crm/leads" }
+  ]
+}
+```
+
+### Dynamic (Screen Architect) screens
+
+```http
+GET /api/v1/dynamic_modules/entities/{entityId}
+```
+
+Fields include `isVisible` / `displayOrder` after per-user prefs. `apiBasePath` points at records API.
+
+### UI renderer (one component for all screens)
+
+```ts
+function DynamicForm({ page }: { page: GenericPage }) {
+  const fields = page.sections
+    .flatMap(s => s.fields)
+    .filter(f => f.visible)                 // honor hide
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
+  return (
+    <form>
+      {page.sections.map(section => (
+        <Section key={section.code} title={section.title}>
+          {section.fields
+            .filter(f => f.visible)
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .map(f => (
+              <FieldControl
+                key={f.fieldKey}
+                name={f.fieldKey}
+                label={f.label}
+                required={f.required}
+                readOnly={f.readOnly}
+                controlType={f.controlType}   // input | number | datepicker | checkbox | textarea | select
+                dataType={f.dataType}
+                width={f.width}
+              />
+            ))}
+        </Section>
+      ))}
+    </form>
+  );
+}
+```
+
+**Rules**
+
+- Never hardcode `companyName` / `email` for GenericPage mode — bind by `fieldKey`.
+- `required === true` → always show; do not offer hide in UI (API rejects hide).
+- Core CRM fields still save via CRM APIs; custom fields go in `customFields` bag (below).
+
+---
+
+## 3. Save data
+
+### A) Hybrid CRM lead (core + custom fields)
+
+Use existing lead APIs (`/api/v1/crm/leads`).
+
+Create / update may include optional:
+
+```json
+{
+  "companyName": "Acme",
+  "phone": "+6591234567",
+  "email": "jane@acme.com",
+  "customFields": {
+    "priority_score": 10,
+    "region": "APAC"
+  }
+}
+```
+
+Get-by-id returns `customFields` when present. List may omit them (use get for detail form).
+
+**UI split of form values**
+
+```ts
+const coreKeys = new Set(page.sections.flatMap(s => s.fields).filter(f => !f.isCustom).map(f => f.fieldKey));
+const payload = {
+  companyName: values.companyName,
+  phone: values.phone,
+  email: values.email,
+  // ...other known core props your Lead DTO expects
+  customFields: Object.fromEntries(
+    Object.entries(values).filter(([k]) => !coreKeys.has(k) || pageField(k)?.isCustom)
+  ),
+};
+```
+
+Simpler approach: send all known Lead DTO properties as today; put only `isCustom` keys into `customFields`.
+
+### B) Dynamic module records
+
+```http
+POST /api/v1/dynamic_modules/entities/{entityId}/records
+PUT  /api/v1/dynamic_modules/records/{recordId}
+GET  /api/v1/dynamic_modules/entities/{entityId}/records
+```
+
+Body:
+
+```json
+{
+  "values": {
+    "employee_name": "Ada",
+    "salary": 120000
+  }
+}
+```
+
+Keys must match field definitions. Required/type validated by API.
+
+---
+
+## 4. Screen Architect (Settings → create module / screen / field)
+
+Admin-only UX; call in order:
+
+| Step | API |
+|------|-----|
+| Create module | `POST /api/v1/dynamic_modules` `{ "code", "name", "description?", "isActive" }` |
+| Create screen (entity) | `POST /api/v1/dynamic_modules/{moduleId}/entities` `{ "entityName", "displayName" }` |
+| Create field | `POST /api/v1/dynamic_modules/entities/{entityId}/fields` `{ "fieldKey", "label", "dataType", "displayOrder", "isRequired" }` |
+
+Allowed `dataType`: `string`, `text`, `number`, `decimal`, `int`, `integer`, `boolean`, `bool`, `date`, `datetime`, `email`, `phone`, `lookup`.
+
+After create → refresh `GET /api/v1/metadata/modules` so navbar updates.
+
+### Add field on **existing** CRM screen
+
+```http
+POST /api/v1/metadata/entities/crm-leads/custom-fields
+```
+
+```json
+{
+  "fieldKey": "priority_score",
+  "label": "Priority Score",
+  "dataType": "number",
+  "displayOrder": 100,
+  "isRequired": false,
+  "isActive": true
+}
+```
+
+Then reload `GET /api/v1/metadata/screens/crm-leads` — new field appears (`isCustom: true`).
+
+---
+
+## 5. Per-user hide / unhide & drag-drop order
+
+Prefs are **per logged-in user**, not tenant-wide.
+
+### Save after user finishes layout edit
+
+```http
+PUT /api/v1/metadata/screens/{screenCode}/preferences
+```
+
+For dynamic screens use **entityName** as `screenCode` (same key used when merging prefs).
+
+```json
+{
+  "fields": [
+    { "fieldKey": "companyName", "isVisible": true, "displayOrder": 1 },
+    { "fieldKey": "notes", "isVisible": false, "displayOrder": 20 },
+    { "fieldKey": "email", "isVisible": true, "displayOrder": 2 }
+  ]
+}
+```
+
+- Send **full list** of fields user can control (replace strategy).
+- Do not set `isVisible: false` on `required` fields → `400 VALIDATION_ERROR`.
+- After save, either re-fetch screen schema or apply local state from the same payload.
+
+### Suggested UI flow
+
+1. Load schema (`GET screens/{code}`).
+2. Show “Customize layout” → drag list + eye toggle (disable toggle when `required`).
+3. On Save layout → `PUT .../preferences`.
+4. On Cancel → discard local draft; keep last server schema.
+
+```ts
+async function saveLayout(screenCode: string, fields: FieldState[]) {
+  await api.put(`/api/v1/metadata/screens/${screenCode}/preferences`, {
+    fields: fields.map((f, i) => ({
+      fieldKey: f.fieldKey,
+      isVisible: f.required ? true : f.visible,
+      displayOrder: i + 1,
+    })),
+  });
+  // refresh
+  return api.get(`/api/v1/metadata/screens/${screenCode}`);
+}
+```
+
+---
+
+## 6. Recommended app structure
+
+```
+AppShell
+  useModules() → GET /metadata/modules
+  <Navbar />
+
+Routes
+  /crm/leads          → HybridScreen("crm-leads")   // metadata GET + CRM APIs
+  /dynamic/:mod/:ent  → DynamicScreen(entityId)     // entity GET + records APIs
+  /settings/architect → ScreenArchitectPage         // dynamic_modules CRUD
+  /settings/fields/:entity → CustomFieldsAdmin      // custom-fields CRUD
+```
+
+Shared pieces:
+
+- `<GenericPageRenderer />` — one form engine
+- `<FieldControl />` — maps `controlType` / `dataType`
+- `<LayoutCustomizer />` — drag + hide → preferences PUT
+
+---
+
+## 7. Quick checklist for UI
+
+- [ ] Login + Bearer on all calls  
+- [ ] Boot navbar from `GET /api/v1/metadata/modules`  
+- [ ] Render forms from schema, not hardcoded field lists  
+- [ ] Filter `visible === false`; sort by `displayOrder`  
+- [ ] Hybrid save: core Lead props + `customFields`  
+- [ ] Dynamic save: `{ values: { ... } }` to records API  
+- [ ] Layout customize → `PUT .../preferences` (per user)  
+- [ ] Architect create module → entity → fields → refresh modules  
+
+---
+
+## 8. What not to do
+
+- Don’t persist field order only in localStorage if you need sync across devices — use preferences API.  
+- Don’t hide required fields in the client and expect save to work without them.  
+- Don’t ALTER / assume new columns on `crm.leads` for custom attributes — use `customFields`.  
+- Don’t treat Dynamic “entity” as Metadata “section” — sections exist only on metadata screens today.
+
+---
+
+## 9. Related APIs (cheat sheet)
+
+| Area | Endpoints |
+|------|-----------|
+| Nav | `GET /api/v1/metadata/modules` |
+| Schema | `GET /api/v1/metadata/screens/{code}` |
+| Prefs | `PUT /api/v1/metadata/screens/{code}/preferences` |
+| Custom fields | `GET/POST /api/v1/metadata/entities/{entityName}/custom-fields`, `PUT/DELETE /api/v1/metadata/custom-fields/{id}` |
+| Dynamic architect | `/api/v1/dynamic_modules/...` |
+| Dynamic data | `/api/v1/dynamic_modules/entities/{id}/records` |
+| CRM leads | `/api/v1/crm/leads` |
+| Me | `GET /api/v1/auth/me` |

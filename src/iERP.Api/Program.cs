@@ -154,7 +154,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var authSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentAuthSeeder>();
     await authSeeder.SeedAsync();
 
-    // ProcessFlow v4: system roles + CRM GenericPage metadata for the seeded tenant.
+    // ProcessFlow v4: system roles + predefined CRM metadata for ALL tenants (local + Railway).
     foreach (var seeder in scope.ServiceProvider.GetServices<IDataSeeder>())
     {
         await seeder.SeedAsync();

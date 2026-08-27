@@ -17,10 +17,7 @@ public static class LeadEndpoints
 {
     public static IEndpointRouteBuilder MapLeadEndpoints(this IEndpointRouteBuilder app)
     {
-        // Existing UI path — do not remove (deployed clients).
-        MapLeadGroup(app, "/api/crm/leads", "/api/crm/followups", "CRM Leads", "CRM FollowUps", string.Empty);
-        // ProcessFlow v4 versioned alias.
-        MapLeadGroup(app, "/api/v1/crm/leads", "/api/v1/crm/followups", "CRM Leads v1", "CRM FollowUps v1", "V1");
+        MapLeadGroup(app, "/api/v1/crm/leads", "/api/v1/crm/followups", "CRM Leads", "CRM FollowUps", string.Empty);
         return app;
     }
 
@@ -100,7 +97,7 @@ public static class LeadEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new CreateLeadCommand(request), cancellationToken);
-        return Results.Created($"/api/crm/leads/{result.Id}", ApiResponse<LeadDto>.Ok(result, "Lead created successfully."));
+        return Results.Created($"/api/v1/crm/leads/{result.Id}", ApiResponse<LeadDto>.Ok(result, "Lead created successfully."));
     }
 
     private static async Task<IResult> GetLeadsAsync(
@@ -164,7 +161,7 @@ public static class LeadEndpoints
     {
         var result = await mediator.Send(new ConvertLeadToOpportunityCommand(leadId, request), cancellationToken);
         return Results.Created(
-            $"/api/crm/opportunities/{result.Id}",
+            $"/api/v1/crm/opportunities/{result.Id}",
             ApiResponse<OpportunityDto>.Ok(result, "Lead converted to opportunity successfully."));
     }
 
@@ -176,7 +173,7 @@ public static class LeadEndpoints
     {
         var result = await mediator.Send(new CreateFollowUpCommand(leadId, request), cancellationToken);
         return Results.Created(
-            $"/api/crm/followups/{result.Id}",
+            $"/api/v1/crm/followups/{result.Id}",
             ApiResponse<LeadFollowUpDto>.Ok(result, "Follow-up created successfully."));
     }
 

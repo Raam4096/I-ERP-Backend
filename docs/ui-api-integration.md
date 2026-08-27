@@ -4,6 +4,9 @@ Guide for frontend developers calling the i-ERP backend (CRM Lead APIs and healt
 
 Related backend detail: [crm-lead-management.md](./crm-lead-management.md)
 
+**Metadata-driven UI / Screen Architect / per-user field layout:**  
+→ **[ui-metadata-dynamic-screens.md](./ui-metadata-dynamic-screens.md)** (share this with UI for ProcessFlow GenericPage work)
+
 ---
 
 ## 1. Base URLs
@@ -21,7 +24,7 @@ Related backend detail: [crm-lead-management.md](./crm-lead-management.md)
 | `GET` | `/health/live` | Liveness |
 | `GET` | `/health` | Aggregate health |
 | `GET` | `/health/ready` | Readiness (includes DB when configured) |
-| `GET` | `/api/v1/leads/health` | CRM module ping |
+| `GET` | `/api/v1/crm/health` | CRM module ping |
 
 Always start with `GET {BASE_URL}/health/live` to confirm connectivity.
 
@@ -151,18 +154,18 @@ Then set `VITE_API_BASE_URL=` empty or `""` and call `/api/...` on the Vite orig
 
 ## 5. CRM Lead APIs
 
-All of these require auth (Development headers or future JWT).
+All of these require auth (JWT Bearer).
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/api/crm/leads` | Create lead |
-| `GET` | `/api/crm/leads` | List (paged) |
-| `GET` | `/api/crm/leads/{id}` | Get one |
-| `PUT` | `/api/crm/leads/{id}` | Update |
-| `DELETE` | `/api/crm/leads/{id}` | Soft delete |
-| `POST` | `/api/crm/leads/{leadId}/followups` | Add follow-up |
-| `GET` | `/api/crm/leads/{leadId}/timeline` | Follow-up history |
-| `PUT` | `/api/crm/followups/{id}` | Update follow-up |
+| `POST` | `/api/v1/crm/leads` | Create lead |
+| `GET` | `/api/v1/crm/leads` | List (paged) |
+| `GET` | `/api/v1/crm/leads/{id}` | Get one |
+| `PUT` | `/api/v1/crm/leads/{id}` | Update |
+| `DELETE` | `/api/v1/crm/leads/{id}` | Soft delete |
+| `POST` | `/api/v1/crm/leads/{leadId}/followups` | Add follow-up |
+| `GET` | `/api/v1/crm/leads/{leadId}/timeline` | Follow-up history |
+| `PUT` | `/api/v1/crm/followups/{id}` | Update follow-up |
 
 JSON property names are **camelCase**.
 
@@ -170,7 +173,7 @@ JSON property names are **camelCase**.
 
 ### List query parameters
 
-`GET /api/crm/leads?page=1&pageSize=20&search=&status=&assignedToUserId=&sortBy=&sortDescending=true`
+`GET /api/v1/crm/leads?page=1&pageSize=20&search=&status=&assignedToUserId=&sortBy=&sortDescending=true`
 
 | Param | Default / notes |
 |-------|-----------------|
@@ -184,7 +187,7 @@ JSON property names are **camelCase**.
 
 ### Create lead body
 
-`POST /api/crm/leads`
+`POST /api/v1/crm/leads`
 
 Required: `companyName`, `phone`, `email`.
 
@@ -288,8 +291,8 @@ Lead numbers look like `LEAD-2026-000001`.
 ## 7. Quick smoke test (browser / Postman)
 
 1. `GET {BASE_URL}/health/live` → 200  
-2. `GET {BASE_URL}/api/crm/leads` with `X-Tenant-Id` + `X-User-Id` → 200 (empty or list)  
-3. `POST {BASE_URL}/api/crm/leads` with sample JSON → 201  
+2. `GET {BASE_URL}/api/v1/crm/leads` with Bearer token → 200 (empty or list)  
+3. `POST {BASE_URL}/api/v1/crm/leads` with sample JSON → 201  
 4. From Vercel UI (`https://i-erp-dev-ui.vercel.app`) call the same — CORS should allow it  
 
 ---
@@ -311,7 +314,10 @@ Lead numbers look like `LEAD-2026-000001`.
 
 - Full user administration APIs (invite/reset password UI flows)
 - Real binary file upload to blob storage  
-- Lead → Opportunity conversion  
 - Permission-policy authorization on every module endpoint  
+- Dynamic module **sections** (group fields client-side for now)
 
 Login / refresh / logout JWT APIs **are available** — see [FRONTEND_AUTH_INTEGRATION.md](./FRONTEND_AUTH_INTEGRATION.md).
+
+Lead → Opportunity APIs **are available** under `/api/v1/crm/opportunities`.  
+Dynamic modules + metadata prefs — see [ui-metadata-dynamic-screens.md](./ui-metadata-dynamic-screens.md).
