@@ -1,5 +1,6 @@
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using iERP.Application.Abstractions.Metadata;
 using iERP.Modules.CRM.Application.Leads.Dtos;
 using iERP.Modules.CRM.Infrastructure;
 using iERP.SharedKernel.Exceptions;
@@ -15,11 +16,13 @@ public sealed class GetLeadByIdQueryHandler : IRequestHandler<GetLeadByIdQuery, 
 {
     private readonly CrmDbContext _db;
     private readonly IMapper _mapper;
+    private readonly ICustomFieldValueStore _customFieldValueStore;
 
-    public GetLeadByIdQueryHandler(CrmDbContext db, IMapper mapper)
+    public GetLeadByIdQueryHandler(CrmDbContext db, IMapper mapper, ICustomFieldValueStore customFieldValueStore)
     {
         _db = db;
         _mapper = mapper;
+        _customFieldValueStore = customFieldValueStore;
     }
 
     public async Task<LeadDto> Handle(GetLeadByIdQuery query, CancellationToken cancellationToken)
@@ -31,7 +34,12 @@ public sealed class GetLeadByIdQueryHandler : IRequestHandler<GetLeadByIdQuery, 
             .FirstOrDefaultAsync(x => x.Id == query.Id, cancellationToken)
             ?? throw new NotFoundException($"Lead '{query.Id}' was not found.");
 
-        return _mapper.Map<LeadDto>(lead);
+        var dto = _mapper.Map<LeadDto>(lead);
+        var customFields = await _customFieldValueStore.GetValuesAsync(
+            LeadMetadata.EntityName,
+            lead.Id,
+            cancellationToken);
+        return dto with { CustomFields = customFields.Count > 0 ? customFields : null };
     }
 }
 

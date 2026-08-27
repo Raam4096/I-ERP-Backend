@@ -1,4 +1,5 @@
 using FluentValidation;
+using iERP.Application.Abstractions.Metadata;
 using iERP.Application.Abstractions.Options;
 using iERP.Application.Abstractions.Seeding;
 using iERP.Infrastructure.Persistence.Interceptors;
@@ -64,6 +65,10 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMetadataScreenService, MetadataScreenService>();
+        services.AddScoped<IMetadataCatalogService, MetadataCatalogService>();
+        services.AddScoped<IUserFieldPreferenceService, UserFieldPreferenceService>();
+        services.AddScoped<ICustomFieldDefinitionService, CustomFieldDefinitionService>();
+        services.AddScoped<ICustomFieldValueStore, CustomFieldValueStore>();
         services.AddScoped<IDynamicModulesService, DynamicModulesService>();
         services.AddScoped<DevelopmentAuthSeeder>();
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);

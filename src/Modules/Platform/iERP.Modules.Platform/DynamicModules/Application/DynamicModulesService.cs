@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using iERP.Modules.Platform.DynamicModules.Application.Dtos;
 using iERP.Modules.Platform.DynamicModules.Domain;
+using iERP.Modules.Platform.Metadata.Application;
+using iERP.Modules.Platform.Metadata.Application.Layout;
 using iERP.Modules.Platform.Tenancy.Infrastructure;
 using iERP.SharedKernel.Exceptions;
 using iERP.SharedKernel.Security;
@@ -53,17 +55,20 @@ public sealed class DynamicModulesService : IDynamicModulesService
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
+    private readonly IUserFieldPreferenceService _preferenceService;
 
     public DynamicModulesService(
         PlatformDbContext db,
         ITenantContext tenantContext,
         ICurrentUser currentUser,
-        IClock clock)
+        IClock clock,
+        IUserFieldPreferenceService preferenceService)
     {
         _db = db;
         _tenantContext = tenantContext;
         _currentUser = currentUser;
         _clock = clock;
+        _preferenceService = preferenceService;
     }
 
     public async Task<IReadOnlyList<DynamicModuleDto>> ListModulesAsync(bool activeOnly, CancellationToken cancellationToken)
@@ -267,7 +272,8 @@ public sealed class DynamicModulesService : IDynamicModulesService
             .ThenBy(x => x.Label)
             .ToListAsync(cancellationToken);
 
-        return MapEntity(entity, module.Code, fields);
+        var preferences = await _preferenceService.GetPreferencesAsync(entity.EntityName, cancellationToken);
+        return MapEntity(entity, module.Code, fields, preferences);
     }
 
     public async Task<DynamicEntityDto> UpdateEntityAsync(Guid entityId, UpdateDynamicEntityRequest request, CancellationToken cancellationToken)
@@ -526,8 +532,38 @@ public sealed class DynamicModulesService : IDynamicModulesService
     private static DynamicEntityDto MapEntity(
         DynamicEntityDefinition entity,
         string moduleCode,
-        IEnumerable<DynamicFieldDefinition> fields) =>
-        new()
+        IEnumerable<DynamicFieldDefinition> fields,
+        IReadOnlyDictionary<string, FieldPreferenceValue>? preferences = null)
+    {
+        var mapped = fields.Select(MapField).ToList();
+        if (preferences is { Count: > 0 })
+        {
+            var states = FieldLayoutPreferenceApplier.ApplyAll(
+                mapped.Select(f => new FieldLayoutState(f.FieldKey, f.IsRequired, f.IsVisible, f.DisplayOrder)),
+                preferences);
+            var byKey = mapped.ToDictionary(f => f.FieldKey, StringComparer.OrdinalIgnoreCase);
+            mapped = states
+                .Where(s => byKey.ContainsKey(s.FieldKey))
+                .Select(s =>
+                {
+                    var source = byKey[s.FieldKey];
+                    return new DynamicFieldDto
+                    {
+                        Id = source.Id,
+                        EntityId = source.EntityId,
+                        FieldKey = source.FieldKey,
+                        Label = source.Label,
+                        DataType = source.DataType,
+                        ControlType = source.ControlType,
+                        DisplayOrder = s.DisplayOrder,
+                        IsRequired = source.IsRequired,
+                        IsVisible = s.Visible
+                    };
+                })
+                .ToList();
+        }
+
+        return new DynamicEntityDto
         {
             Id = entity.Id,
             ModuleId = entity.DynamicModuleDefinitionId,
@@ -536,8 +572,9 @@ public sealed class DynamicModulesService : IDynamicModulesService
             DisplayName = entity.DisplayName,
             IsActive = entity.IsActive,
             ApiBasePath = $"/api/v1/dynamic_modules/entities/{entity.Id}/records",
-            Fields = fields.Select(MapField).ToList()
+            Fields = mapped
         };
+    }
 
     private static DynamicFieldDto MapField(DynamicFieldDefinition field) =>
         new()
@@ -549,7 +586,8 @@ public sealed class DynamicModulesService : IDynamicModulesService
             DataType = field.DataType,
             ControlType = MapControl(field.DataType),
             DisplayOrder = field.DisplayOrder,
-            IsRequired = field.IsRequired
+            IsRequired = field.IsRequired,
+            IsVisible = true
         };
 
     private static DynamicRecordDto MapRecord(DynamicRecord record)

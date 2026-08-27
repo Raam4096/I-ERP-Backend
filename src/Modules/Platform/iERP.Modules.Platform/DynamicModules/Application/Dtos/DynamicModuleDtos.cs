@@ -42,6 +42,7 @@ public sealed class DynamicFieldDto
     public string ControlType { get; init; } = "input";
     public int DisplayOrder { get; init; }
     public bool IsRequired { get; init; }
+    public bool IsVisible { get; init; } = true;
 }
 
 public sealed class DynamicRecordDto

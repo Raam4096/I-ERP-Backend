@@ -1,4 +1,5 @@
 using iERP.Modules.Platform.Metadata.Application.Dtos;
+using iERP.Modules.Platform.Metadata.Application.Layout;
 using iERP.Modules.Platform.Metadata.Infrastructure;
 using iERP.SharedKernel.Exceptions;
 using iERP.SharedKernel.Tenancy;
@@ -15,11 +16,16 @@ public sealed class MetadataScreenService : IMetadataScreenService
 {
     private readonly MetadataDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IUserFieldPreferenceService _preferenceService;
 
-    public MetadataScreenService(MetadataDbContext db, ITenantContext tenantContext)
+    public MetadataScreenService(
+        MetadataDbContext db,
+        ITenantContext tenantContext,
+        IUserFieldPreferenceService preferenceService)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _preferenceService = preferenceService;
     }
 
     public async Task<GenericPageDto> GetScreenAsync(string screenCode, CancellationToken cancellationToken)
@@ -44,6 +50,8 @@ public sealed class MetadataScreenService : IMetadataScreenService
             .OrderBy(x => x.DisplayOrder)
             .ToListAsync(cancellationToken);
 
+        var preferences = await _preferenceService.GetPreferencesAsync(code, cancellationToken);
+
         var sections = screen.Sections
             .OrderBy(s => s.DisplayOrder)
             .Select(section =>
@@ -64,7 +72,6 @@ public sealed class MetadataScreenService : IMetadataScreenService
                         IsCustom = false
                     });
 
-                // Append custom fields to the first section (ProcessFlow auto-render rule).
                 var merged = coreFields.ToList();
                 if (section.DisplayOrder == screen.Sections.Min(x => x.DisplayOrder))
                 {
@@ -91,7 +98,7 @@ public sealed class MetadataScreenService : IMetadataScreenService
                     Code = section.Code,
                     Title = section.Name,
                     Type = "header",
-                    Fields = merged.OrderBy(f => f.DisplayOrder).ToList()
+                    Fields = ApplyPreferences(merged, preferences)
                 };
             })
             .ToList();
@@ -123,6 +130,38 @@ public sealed class MetadataScreenService : IMetadataScreenService
                 }
             ]
         };
+    }
+
+    public static IReadOnlyList<GenericPageFieldDto> ApplyPreferences(
+        IEnumerable<GenericPageFieldDto> fields,
+        IReadOnlyDictionary<string, FieldPreferenceValue> preferences)
+    {
+        var fieldList = fields.ToList();
+        var states = FieldLayoutPreferenceApplier.ApplyAll(
+            fieldList.Select(f => new FieldLayoutState(f.FieldKey, f.Required, f.Visible, f.DisplayOrder)),
+            preferences);
+
+        var byKey = fieldList.ToDictionary(f => f.FieldKey, StringComparer.OrdinalIgnoreCase);
+        return states
+            .Where(s => byKey.ContainsKey(s.FieldKey))
+            .Select(s =>
+            {
+                var source = byKey[s.FieldKey];
+                return new GenericPageFieldDto
+                {
+                    FieldKey = source.FieldKey,
+                    Label = source.Label,
+                    DataType = source.DataType,
+                    ControlType = source.ControlType,
+                    Required = source.Required,
+                    ReadOnly = source.ReadOnly,
+                    Visible = s.Visible,
+                    Width = source.Width,
+                    DisplayOrder = s.DisplayOrder,
+                    IsCustom = source.IsCustom
+                };
+            })
+            .ToList();
     }
 
     private static string MapControl(string dataType) =>
