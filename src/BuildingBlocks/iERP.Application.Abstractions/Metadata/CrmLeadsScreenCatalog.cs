@@ -8,7 +8,7 @@ public static class CrmLeadsScreenCatalog
 {
     public const string ScreenCode = "crm-leads";
     public const string ModuleCode = "crm";
-    public const string ScreenName = "CRM Leads";
+    public const string ScreenName = "Lead Management";
     public const string Route = "/crm/leads";
     public const string ApiBasePath = "/api/v1/crm/leads";
 

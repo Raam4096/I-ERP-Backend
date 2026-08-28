@@ -52,16 +52,23 @@ Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that ret
 | `"metadata"` | Predefined / Hybrid (seeded) | CRM → screen `crm-leads` |
 | `"dynamic"` | Created in Screen Architect | Any custom module |
 
-Today’s seeded predefined module (after API restart on any environment, including Railway):
+### Predefined modules seeded (UI catalog)
 
-| Module code | Screen code | Route | Data API |
-|-------------|-------------|-------|----------|
-| `crm` | `crm-leads` | `/crm/leads` | `/api/v1/crm/leads` |
-| `crm` | `crm-opportunities` | `/crm/opportunities` | `/api/v1/crm/opportunities` |
+| Module | Screens |
+|--------|---------|
+| Sales & Distribution | Quotation Management, Sales Orders, Invoice Management |
+| Procurement Hub | Purchase Requests, Purchase Orders, Supplier Invoices |
+| Inventory & Supply Chain | Item Management, Warehouse Management, Stock Transfers |
+| Finance & Treasury | General Ledger, Accounts Payable, Accounts Receivable |
+| CRM & Customer Engagement | CRM Mission Control, **Lead Management** (full form), Contact Directory, **Opportunity Pipeline** (basic fields), Activities & Follow-Ups, Campaign Manager |
+| HR & Payroll | Employee Management, Leave Management, Payroll Processing |
+| Project Management | Project Portfolio, Project Tasks, Project Billing |
+| Manufacturing | Production Planning, Work Orders, Quality Control |
 
-Seeder runs on **startup for every tenant** in the DB (not only local AuthSeed). Redeploy/restart Railway API once after this change so empty Railway metadata is filled.
+- **Implemented** screens: `renderMode = "generic"` + real `apiBasePath` (Lead Management / Opportunity Pipeline).  
+- **Not implemented yet**: `renderMode = "under_implementation"` + stub section description — UI should show “Under implementation” when there is no usable data/API.
 
-So the UI developer does **not** hardcode CRM in the nav. CRM appears in the same list as new modules.
+Seeder runs on **startup for every tenant**. Redeploy/restart after pull so Railway DB picks up new modules/screens.
 
 Response `data[]` shape:
 
