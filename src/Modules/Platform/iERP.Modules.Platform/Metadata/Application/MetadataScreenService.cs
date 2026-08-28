@@ -97,6 +97,7 @@ public sealed class MetadataScreenService : IMetadataScreenService
                 {
                     Code = section.Code,
                     Title = section.Name,
+                    Description = section.Description,
                     Type = "header",
                     Fields = ApplyPreferences(merged, preferences)
                 };
@@ -158,7 +159,8 @@ public sealed class MetadataScreenService : IMetadataScreenService
                     Visible = s.Visible,
                     Width = source.Width,
                     DisplayOrder = s.DisplayOrder,
-                    IsCustom = source.IsCustom
+                    IsCustom = source.IsCustom,
+                    Value = source.Value
                 };
             })
             .ToList();
