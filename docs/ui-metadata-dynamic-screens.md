@@ -111,15 +111,83 @@ GET /api/v1/auth/me
 
 ---
 
-## 2. Open screen — load schema, render dynamically
+## 2. Open screen — load schema, then values
 
-### Hybrid / seeded screens (e.g. CRM Leads)
+### Schema (sections + fields + descriptions)
 
 ```http
 GET /api/v1/metadata/screens/crm-leads
 ```
 
-Returns **GenericPage** (already merges custom fields + **current user’s** hide/order prefs):
+CRM Leads is seeded with UI sections:
+
+| Section code | Title |
+|--------------|--------|
+| `primary_information` | Primary Information |
+| `classification` | Classification |
+| `additional_information` | Additional Information |
+| `follow_ups` | Follow-ups |
+
+Each section includes `description` and ordered `fields` (`fieldKey` is **camelCase**, matching CRM lead APIs: `companyName`, `phone`, …).
+
+### Values (section-wise, with existing lead data)
+
+```http
+GET /api/v1/crm/leads/{id}/form
+```
+
+Returns:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "screenCode": "crm-leads",
+    "leadNumber": "LEAD-2026-000001",
+    "sections": [
+      {
+        "code": "primary_information",
+        "title": "Primary Information",
+        "description": "Core company and contact details for the lead.",
+        "fields": [
+          {
+            "fieldKey": "companyName",
+            "label": "Company Name",
+            "dataType": "text",
+            "controlType": "input",
+            "required": true,
+            "readOnly": false,
+            "displayOrder": 1,
+            "value": "Nexus Innovations Pvt Ltd"
+          }
+        ]
+      }
+    ],
+    "valuesBySection": {
+      "primary_information": {
+        "companyName": "Nexus Innovations Pvt Ltd",
+        "company_name": "Nexus Innovations Pvt Ltd",
+        "contactPerson": "Rajesh Kumar",
+        "phone": "+91 98765 43210"
+      },
+      "classification": { "subsidiary": "..." },
+      "additional_information": { "projectDescription": "...", "notes": "..." },
+      "follow_ups": { "followUpDate": "...", "followUpStatus": "..." }
+    }
+  }
+}
+```
+
+`valuesBySection` includes both camelCase and snake_case aliases so either UI style works. Prefer camelCase when calling create/update lead APIs.
+
+### Hybrid / seeded screens (e.g. CRM Leads) — schema only
+
+```http
+GET /api/v1/metadata/screens/crm-leads
+```
+
+Returns **GenericPage** (already merges custom fields + **current user’s** hide/order prefs).
 
 ```json
 {

@@ -1,8 +1,10 @@
+using iERP.Application.Abstractions.Metadata;
 using iERP.Application.Abstractions.Seeding;
 using iERP.Modules.Platform.Metadata.Domain;
 using iERP.Modules.Platform.Metadata.Infrastructure;
 using iERP.Modules.Platform.Tenancy.Infrastructure;
 using iERP.SharedKernel.Tenancy;
+using iERP.SharedKernel.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,28 +12,31 @@ namespace iERP.Modules.Platform.Metadata.Application.Seeding;
 
 /// <summary>
 /// Seeds predefined Hybrid module/screen/section/field metadata for every tenant.
-/// Runs on startup (local + Railway) so GET /api/v1/metadata/modules is never empty for existing tenants.
+/// Keeps CRM Leads layout in sync with <see cref="CrmLeadsScreenCatalog"/> (UI section shape).
 /// </summary>
 public sealed class DefaultMetadataSeeder : IDataSeeder
 {
-    public const string CrmModuleCode = "crm";
-    public const string CrmLeadsScreenCode = "crm-leads";
+    public const string CrmModuleCode = CrmLeadsScreenCatalog.ModuleCode;
+    public const string CrmLeadsScreenCode = CrmLeadsScreenCatalog.ScreenCode;
     public const string CrmOpportunitiesScreenCode = "crm-opportunities";
 
     private readonly MetadataDbContext _db;
     private readonly PlatformDbContext _platformDb;
     private readonly ITenantContext _tenantContext;
+    private readonly IClock _clock;
     private readonly ILogger<DefaultMetadataSeeder> _logger;
 
     public DefaultMetadataSeeder(
         MetadataDbContext db,
         PlatformDbContext platformDb,
         ITenantContext tenantContext,
+        IClock clock,
         ILogger<DefaultMetadataSeeder> logger)
     {
         _db = db;
         _platformDb = platformDb;
         _tenantContext = tenantContext;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -43,8 +48,6 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             .Select(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        // Fallback: AuthSeed may have set tenant in this same startup scope before tenants query,
-        // or a single-tenant deploy with tenants loaded differently.
         if (tenantIds.Count == 0 && _tenantContext.HasTenant && _tenantContext.TenantId is Guid single)
         {
             tenantIds.Add(single);
@@ -68,32 +71,15 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
     private async Task SeedTenantAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var module = await EnsureModuleAsync(tenantId, cancellationToken);
-        var leadsSeeded = await EnsureScreenAsync(
-            tenantId,
-            module.Id,
-            CrmLeadsScreenCode,
-            name: "CRM Leads",
-            route: "/crm/leads",
-            apiBasePath: "/api/v1/crm/leads",
-            LeadFields,
-            cancellationToken);
+        var leadsChanged = await EnsureCrmLeadsLayoutAsync(tenantId, module.Id, cancellationToken);
+        var oppsSeeded = await EnsureOpportunityScreenAsync(tenantId, module.Id, cancellationToken);
 
-        var oppsSeeded = await EnsureScreenAsync(
-            tenantId,
-            module.Id,
-            CrmOpportunitiesScreenCode,
-            name: "CRM Opportunities",
-            route: "/crm/opportunities",
-            apiBasePath: "/api/v1/crm/opportunities",
-            OpportunityFields,
-            cancellationToken);
-
-        if (leadsSeeded || oppsSeeded)
+        if (leadsChanged || oppsSeeded)
         {
             _logger.LogInformation(
-                "Seeded predefined CRM metadata for tenant {TenantId} (leads={Leads}, opportunities={Opps})",
+                "Synced predefined CRM metadata for tenant {TenantId} (leadsLayout={Leads}, opportunities={Opps})",
                 tenantId,
-                leadsSeeded,
+                leadsChanged,
                 oppsSeeded);
         }
     }
@@ -111,7 +97,6 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             return module;
         }
 
-        // Revive soft-deleted module with same code if present (unique index).
         module = await _db.ModuleDefinitions
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(
@@ -142,20 +127,181 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         return module;
     }
 
-    private async Task<bool> EnsureScreenAsync(
-        Guid tenantId,
-        Guid moduleId,
-        string screenCode,
-        string name,
-        string route,
-        string apiBasePath,
-        IReadOnlyList<SeedField> fields,
-        CancellationToken cancellationToken)
+    private async Task<bool> EnsureCrmLeadsLayoutAsync(Guid tenantId, Guid moduleId, CancellationToken cancellationToken)
+    {
+        var screen = await _db.ScreenDefinitions
+            .IgnoreQueryFilters()
+            .Include(x => x.Sections)
+            .ThenInclude(s => s.Fields)
+            .FirstOrDefaultAsync(
+                x => x.TenantId == tenantId && x.Code == CrmLeadsScreenCode,
+                cancellationToken);
+
+        var changed = false;
+        if (screen is null)
+        {
+            screen = new ScreenDefinition
+            {
+                ModuleDefinitionId = moduleId,
+                Code = CrmLeadsScreenCode,
+                Name = CrmLeadsScreenCatalog.ScreenName,
+                Route = CrmLeadsScreenCatalog.Route,
+                RenderMode = "generic",
+                EntityName = CrmLeadsScreenCode,
+                ApiBasePath = CrmLeadsScreenCatalog.ApiBasePath,
+                WorkflowEnabled = false,
+                PrintEnabled = false,
+                AiEnabled = true
+            };
+            screen.SetTenantId(tenantId);
+            _db.ScreenDefinitions.Add(screen);
+            changed = true;
+        }
+        else
+        {
+            if (screen.IsDeleted)
+            {
+                screen.IsDeleted = false;
+                screen.DeletedAt = null;
+                screen.DeletedBy = null;
+                changed = true;
+            }
+
+            screen.ModuleDefinitionId = moduleId;
+            screen.Name = CrmLeadsScreenCatalog.ScreenName;
+            screen.Route = CrmLeadsScreenCatalog.Route;
+            screen.ApiBasePath = CrmLeadsScreenCatalog.ApiBasePath;
+            screen.EntityName = CrmLeadsScreenCode;
+            screen.RenderMode = "generic";
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var catalogCodes = CrmLeadsScreenCatalog.Sections.Select(x => x.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var now = _clock.UtcNow;
+
+        // Soft-delete legacy / unknown sections (e.g. old "main").
+        foreach (var section in screen.Sections.Where(s => !s.IsDeleted && !catalogCodes.Contains(s.Code)))
+        {
+            foreach (var field in section.Fields.Where(f => !f.IsDeleted))
+            {
+                field.SoftDelete(null, now);
+            }
+
+            section.SoftDelete(null, now);
+            changed = true;
+        }
+
+        foreach (var spec in CrmLeadsScreenCatalog.Sections.OrderBy(x => x.Order))
+        {
+            var section = screen.Sections.FirstOrDefault(s =>
+                s.Code.Equals(spec.Code, StringComparison.OrdinalIgnoreCase));
+
+            if (section is null)
+            {
+                section = new SectionDefinition
+                {
+                    ScreenDefinitionId = screen.Id,
+                    Code = spec.Code,
+                    Name = spec.Name,
+                    Description = spec.Description,
+                    DisplayOrder = spec.Order
+                };
+                section.SetTenantId(tenantId);
+                screen.Sections.Add(section);
+                _db.SectionDefinitions.Add(section);
+                changed = true;
+            }
+            else
+            {
+                if (section.IsDeleted)
+                {
+                    section.IsDeleted = false;
+                    section.DeletedAt = null;
+                    section.DeletedBy = null;
+                    changed = true;
+                }
+
+                if (section.Name != spec.Name
+                    || section.Description != spec.Description
+                    || section.DisplayOrder != spec.Order)
+                {
+                    section.Name = spec.Name;
+                    section.Description = spec.Description;
+                    section.DisplayOrder = spec.Order;
+                    changed = true;
+                }
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var specKeys = spec.Fields.Select(f => f.FieldKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in section.Fields.Where(f => !f.IsDeleted && !specKeys.Contains(f.FieldKey)))
+            {
+                field.SoftDelete(null, now);
+                changed = true;
+            }
+
+            foreach (var fieldSpec in spec.Fields.OrderBy(x => x.Order))
+            {
+                var field = section.Fields.FirstOrDefault(f =>
+                    f.FieldKey.Equals(fieldSpec.FieldKey, StringComparison.OrdinalIgnoreCase));
+
+                if (field is null)
+                {
+                    field = new FieldDefinition
+                    {
+                        SectionDefinitionId = section.Id,
+                        FieldKey = fieldSpec.FieldKey,
+                        Label = fieldSpec.Label,
+                        DataType = fieldSpec.DataType,
+                        ControlType = fieldSpec.ControlType,
+                        DisplayOrder = fieldSpec.Order,
+                        IsRequired = fieldSpec.Required,
+                        IsReadOnly = fieldSpec.ReadOnly,
+                        IsVisible = true,
+                        Width = 3
+                    };
+                    field.SetTenantId(tenantId);
+                    section.Fields.Add(field);
+                    changed = true;
+                }
+                else
+                {
+                    if (field.IsDeleted)
+                    {
+                        field.IsDeleted = false;
+                        field.DeletedAt = null;
+                        field.DeletedBy = null;
+                        changed = true;
+                    }
+
+                    field.Label = fieldSpec.Label;
+                    field.DataType = fieldSpec.DataType;
+                    field.ControlType = fieldSpec.ControlType;
+                    field.DisplayOrder = fieldSpec.Order;
+                    field.IsRequired = fieldSpec.Required;
+                    field.IsReadOnly = fieldSpec.ReadOnly;
+                    field.IsVisible = true;
+                }
+            }
+        }
+
+        if (changed || _db.ChangeTracker.HasChanges())
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<bool> EnsureOpportunityScreenAsync(Guid tenantId, Guid moduleId, CancellationToken cancellationToken)
     {
         var exists = await _db.ScreenDefinitions
             .IgnoreQueryFilters()
             .AnyAsync(
-                x => x.TenantId == tenantId && x.Code == screenCode && !x.IsDeleted,
+                x => x.TenantId == tenantId && x.Code == CrmOpportunitiesScreenCode && !x.IsDeleted,
                 cancellationToken);
 
         if (exists)
@@ -166,7 +312,7 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         var softDeleted = await _db.ScreenDefinitions
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(
-                x => x.TenantId == tenantId && x.Code == screenCode,
+                x => x.TenantId == tenantId && x.Code == CrmOpportunitiesScreenCode,
                 cancellationToken);
 
         if (softDeleted is not null)
@@ -174,9 +320,6 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             softDeleted.IsDeleted = false;
             softDeleted.DeletedAt = null;
             softDeleted.DeletedBy = null;
-            softDeleted.Name = name;
-            softDeleted.Route = route;
-            softDeleted.ApiBasePath = apiBasePath;
             softDeleted.ModuleDefinitionId = moduleId;
             await _db.SaveChangesAsync(cancellationToken);
             return true;
@@ -185,12 +328,12 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         var screen = new ScreenDefinition
         {
             ModuleDefinitionId = moduleId,
-            Code = screenCode,
-            Name = name,
-            Route = route,
+            Code = CrmOpportunitiesScreenCode,
+            Name = "CRM Opportunities",
+            Route = "/crm/opportunities",
             RenderMode = "generic",
-            EntityName = screenCode,
-            ApiBasePath = apiBasePath,
+            EntityName = CrmOpportunitiesScreenCode,
+            ApiBasePath = "/api/v1/crm/opportunities",
             WorkflowEnabled = false,
             PrintEnabled = false,
             AiEnabled = true
@@ -201,11 +344,12 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         {
             Code = "main",
             Name = "Details",
+            Description = "Opportunity details.",
             DisplayOrder = 1
         };
         section.SetTenantId(tenantId);
 
-        foreach (var f in fields)
+        foreach (var f in OpportunityFields)
         {
             var field = new FieldDefinition
             {
@@ -229,33 +373,13 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         return true;
     }
 
-    private static readonly IReadOnlyList<SeedField> LeadFields =
+    private static readonly IReadOnlyList<(string Key, string Label, string DataType, string ControlType, int Order, bool Required, bool ReadOnly)> OpportunityFields =
     [
-        new("leadNumber", "Lead Number", "text", "input", 1, Required: false, ReadOnly: true),
-        new("companyName", "Company Name", "text", "input", 2, Required: true, ReadOnly: false),
-        new("contactPerson", "Contact Person", "text", "input", 3, Required: false, ReadOnly: false),
-        new("phone", "Phone", "text", "input", 4, Required: true, ReadOnly: false),
-        new("email", "Email", "text", "input", 5, Required: true, ReadOnly: false),
-        new("status", "Status", "text", "input", 6, Required: false, ReadOnly: false),
-        new("notes", "Notes", "text", "textarea", 7, Required: false, ReadOnly: false),
+        ("opportunityNumber", "Opportunity Number", "text", "input", 1, false, true),
+        ("name", "Name", "text", "input", 2, true, false),
+        ("stage", "Stage", "text", "input", 3, false, false),
+        ("opportunityValue", "Opportunity Value", "number", "number", 4, false, false),
+        ("status", "Status", "text", "input", 5, false, false),
+        ("notes", "Notes", "text", "textarea", 6, false, false),
     ];
-
-    private static readonly IReadOnlyList<SeedField> OpportunityFields =
-    [
-        new("opportunityNumber", "Opportunity Number", "text", "input", 1, Required: false, ReadOnly: true),
-        new("name", "Name", "text", "input", 2, Required: true, ReadOnly: false),
-        new("stage", "Stage", "text", "input", 3, Required: false, ReadOnly: false),
-        new("opportunityValue", "Opportunity Value", "number", "number", 4, Required: false, ReadOnly: false),
-        new("status", "Status", "text", "input", 5, Required: false, ReadOnly: false),
-        new("notes", "Notes", "text", "textarea", 6, Required: false, ReadOnly: false),
-    ];
-
-    private sealed record SeedField(
-        string Key,
-        string Label,
-        string DataType,
-        string ControlType,
-        int Order,
-        bool Required,
-        bool ReadOnly);
 }

@@ -48,6 +48,11 @@ public static class LeadEndpoints
             .Produces<ApiResponse<LeadDto>>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
+        leads.MapGet("/{id:guid}/form", GetLeadFormDataAsync)
+            .WithName("GetLeadFormData" + nameSuffix)
+            .Produces<ApiResponse<LeadFormDataDto>>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
         leads.MapPut("/{id:guid}", UpdateLeadAsync)
             .WithName("UpdateLead" + nameSuffix)
             .Produces<ApiResponse<LeadDto>>(StatusCodes.Status200OK)
@@ -132,6 +137,15 @@ public static class LeadEndpoints
     {
         var result = await mediator.Send(new GetLeadByIdQuery(id), cancellationToken);
         return Results.Ok(ApiResponse<LeadDto>.Ok(result));
+    }
+
+    private static async Task<IResult> GetLeadFormDataAsync(
+        Guid id,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetLeadFormDataQuery(id), cancellationToken);
+        return Results.Ok(ApiResponse<LeadFormDataDto>.Ok(result));
     }
 
     private static async Task<IResult> UpdateLeadAsync(

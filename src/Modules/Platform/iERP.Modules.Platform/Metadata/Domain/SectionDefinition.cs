@@ -9,6 +9,7 @@ public sealed class SectionDefinition : AuditableEntity
     public ScreenDefinition? ScreenDefinition { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public int DisplayOrder { get; set; }
     public ICollection<FieldDefinition> Fields { get; set; } = new List<FieldDefinition>();
 

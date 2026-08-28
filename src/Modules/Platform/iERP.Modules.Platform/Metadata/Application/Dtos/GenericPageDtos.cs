@@ -34,6 +34,7 @@ public sealed class GenericPageSectionDto
 {
     public string Code { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
+    public string? Description { get; init; }
     public string Type { get; init; } = "header";
     public IReadOnlyList<GenericPageFieldDto> Fields { get; init; } = [];
 }
@@ -50,6 +51,8 @@ public sealed class GenericPageFieldDto
     public int Width { get; init; } = 3;
     public int DisplayOrder { get; init; }
     public bool IsCustom { get; init; }
+    /// <summary>Populated when returning form data with a record (optional).</summary>
+    public object? Value { get; init; }
 }
 
 public sealed class GenericPageActionDto
