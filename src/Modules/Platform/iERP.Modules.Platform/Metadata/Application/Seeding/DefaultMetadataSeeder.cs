@@ -11,15 +11,16 @@ using Microsoft.Extensions.Logging;
 namespace iERP.Modules.Platform.Metadata.Application.Seeding;
 
 /// <summary>
-/// Seeds all predefined product modules/screens for every tenant (UI catalog).
-/// CRM Lead Management gets full section/field layout; other screens are stubs
-/// (<c>renderMode = under_implementation</c>) until their APIs exist.
+/// Seeds all predefined product modules/screens for every tenant.
+/// CRM is strict: display name "CRM", screens = Leads + Opportunities only.
+/// Extra CRM screens previously seeded are soft-deleted. Other modules stay stubs
+/// (<c>renderMode = under_implementation</c>) until implemented.
 /// </summary>
 public sealed class DefaultMetadataSeeder : IDataSeeder
 {
     public const string CrmModuleCode = CrmLeadsScreenCatalog.ModuleCode;
     public const string CrmLeadsScreenCode = CrmLeadsScreenCatalog.ScreenCode;
-    public const string CrmOpportunitiesScreenCode = "crm-opportunities";
+    public const string CrmOpportunitiesScreenCode = CrmOpportunitiesScreenCatalog.ScreenCode;
 
     private readonly MetadataDbContext _db;
     private readonly PlatformDbContext _platformDb;
@@ -96,6 +97,13 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
                     changedScreens++;
                 }
             }
+
+            // Strict catalog: soft-delete screens for this module that are no longer defined.
+            changedScreens += await DeactivateOrphanScreensAsync(
+                tenantId,
+                module.Id,
+                moduleSpec.Screens.Select(s => s.Code).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                cancellationToken);
         }
 
         _logger.LogInformation(
@@ -103,6 +111,51 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             tenantId,
             changedModules,
             changedScreens);
+    }
+
+    private async Task<int> DeactivateOrphanScreensAsync(
+        Guid tenantId,
+        Guid moduleId,
+        HashSet<string> allowedCodes,
+        CancellationToken cancellationToken)
+    {
+        var orphans = await _db.ScreenDefinitions
+            .IgnoreQueryFilters()
+            .Include(x => x.Sections)
+            .ThenInclude(s => s.Fields)
+            .Where(x => x.TenantId == tenantId
+                        && x.ModuleDefinitionId == moduleId
+                        && !x.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        var now = _clock.UtcNow;
+        var changed = 0;
+        foreach (var screen in orphans.Where(s => !allowedCodes.Contains(s.Code)))
+        {
+            foreach (var section in screen.Sections.Where(s => !s.IsDeleted))
+            {
+                foreach (var field in section.Fields.Where(f => !f.IsDeleted))
+                {
+                    field.SoftDelete(null, now);
+                }
+
+                section.SoftDelete(null, now);
+            }
+
+            screen.SoftDelete(null, now);
+            changed++;
+            _logger.LogInformation(
+                "Soft-deleted orphan metadata screen {ScreenCode} for tenant {TenantId} (not in predefined catalog)",
+                screen.Code,
+                tenantId);
+        }
+
+        if (changed > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return changed;
     }
 
     private async Task<ModuleDefinition> EnsureModuleAsync(

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using iERP.Application.Abstractions.Metadata;
 using iERP.Modules.CRM.Application.Leads.Dtos;
 using iERP.Modules.CRM.Infrastructure;
@@ -11,6 +10,7 @@ namespace iERP.Modules.CRM.Application.Leads.Queries;
 
 /// <summary>
 /// Section-wise lead form payload for metadata-driven UI (schema + values).
+/// Field keys are snake_case to match CrmLeadsScreenCatalog / UI example JSON.
 /// </summary>
 public sealed class LeadFormDataDto
 {
@@ -19,7 +19,7 @@ public sealed class LeadFormDataDto
     public string LeadNumber { get; init; } = string.Empty;
     public IReadOnlyList<LeadFormSectionDto> Sections { get; init; } = [];
     /// <summary>
-    /// UI-friendly bag matching section codes → field values (camelCase keys matching CRM APIs).
+    /// UI bag: section code → snake_case field values (same shape as CrmLeadsExamplePayload).
     /// </summary>
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> ValuesBySection { get; init; }
         = new Dictionary<string, IReadOnlyDictionary<string, object?>>();
@@ -72,28 +72,28 @@ public sealed class GetLeadFormDataQueryHandler : IRequestHandler<GetLeadFormDat
 
         var valueMap = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            ["companyName"] = lead.CompanyName,
-            ["contactPerson"] = lead.ContactPerson,
-            ["phone"] = lead.Phone,
+            ["company_name"] = lead.CompanyName,
+            ["contact_person"] = lead.ContactPerson,
+            ["phone_number"] = lead.Phone,
             ["email"] = lead.Email,
             ["industry"] = lead.Industry,
-            ["projectType"] = lead.ProjectType,
-            ["leadSource"] = lead.LeadSource,
+            ["project_type"] = lead.ProjectType,
+            ["lead_source"] = lead.LeadSource,
             ["status"] = lead.Status,
-            ["assignedTo"] = lead.AssignedToUserId,
+            ["assigned_to"] = lead.AssignedToUserId?.ToString(),
             ["website"] = lead.Website,
-            ["companySize"] = lead.CompanySize,
-            ["annualRevenue"] = lead.AnnualRevenue,
+            ["company_size"] = lead.CompanySize,
+            ["annual_revenue"] = lead.AnnualRevenue?.ToString(CultureInfo.InvariantCulture),
             ["address"] = lead.Address,
             ["subsidiary"] = lead.Subsidiary,
-            ["projectDescription"] = lead.ProjectDescription,
+            ["project_description"] = lead.ProjectDescription,
             ["notes"] = lead.Notes,
-            ["followUpDate"] = latestFollowUp?.FollowUpDate,
-            ["newFollowUpDate"] = latestFollowUp?.NextFollowUpDate,
-            ["followUpStatus"] = latestFollowUp?.Status,
-            ["followUpType"] = latestFollowUp?.ActivityType,
-            ["followUpFile"] = latestFollowUp?.Attachments.OrderByDescending(a => a.CreatedAt).FirstOrDefault()?.FileName,
-            ["followUpNotes"] = latestFollowUp?.Remarks
+            ["follow_up_date"] = FormatDisplayDate(latestFollowUp?.FollowUpDate),
+            ["new_follow_up_date"] = FormatDisplayDate(latestFollowUp?.NextFollowUpDate),
+            ["follow_up_status"] = latestFollowUp?.Status,
+            ["follow_up_type"] = latestFollowUp?.ActivityType,
+            ["follow_up_file"] = latestFollowUp?.Attachments.OrderByDescending(a => a.CreatedAt).FirstOrDefault()?.FileName,
+            ["follow_up_notes"] = latestFollowUp?.Remarks
         };
 
         var sections = new List<LeadFormSectionDto>();
@@ -108,8 +108,6 @@ public sealed class GetLeadFormDataQueryHandler : IRequestHandler<GetLeadFormDat
             {
                 valueMap.TryGetValue(fieldSpec.FieldKey, out var value);
                 sectionValues[fieldSpec.FieldKey] = value;
-                // Also expose snake_case alias for UI samples that use company_name etc.
-                sectionValues[ToSnakeCase(fieldSpec.FieldKey)] = value;
 
                 fields.Add(new LeadFormFieldDto
                 {
@@ -143,32 +141,66 @@ public sealed class GetLeadFormDataQueryHandler : IRequestHandler<GetLeadFormDat
         };
     }
 
-    private static string ToSnakeCase(string value)
+    private static string? FormatDisplayDate(DateTimeOffset? value) =>
+        value?.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture);
+}
+
+/// <summary>
+/// Static example payload for UI Leads layout (matches CrmLeadsExamplePayload).
+/// </summary>
+public sealed class LeadExampleFormDto
+{
+    public string ScreenCode { get; init; } = CrmLeadsScreenCatalog.ScreenCode;
+    public string ScreenName { get; init; } = CrmLeadsScreenCatalog.ScreenName;
+    public IReadOnlyList<LeadFormSectionDto> Sections { get; init; } = [];
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> ValuesBySection { get; init; }
+        = CrmLeadsExamplePayload.ValuesBySection;
+}
+
+public sealed record GetLeadExampleFormQuery : IRequest<LeadExampleFormDto>;
+
+public sealed class GetLeadExampleFormQueryHandler : IRequestHandler<GetLeadExampleFormQuery, LeadExampleFormDto>
+{
+    public Task<LeadExampleFormDto> Handle(GetLeadExampleFormQuery request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(value))
-        {
-            return value;
-        }
-
-        var sb = new StringBuilder(value.Length + 4);
-        for (var i = 0; i < value.Length; i++)
-        {
-            var c = value[i];
-            if (char.IsUpper(c))
+        var sections = CrmLeadsScreenCatalog.Sections
+            .OrderBy(x => x.Order)
+            .Select(section =>
             {
-                if (i > 0)
+                CrmLeadsExamplePayload.ValuesBySection.TryGetValue(section.Code, out var sectionValues);
+                sectionValues ??= new Dictionary<string, object?>();
+
+                return new LeadFormSectionDto
                 {
-                    sb.Append('_');
-                }
+                    Code = section.Code,
+                    Title = section.Name,
+                    Description = section.Description,
+                    Fields = section.Fields
+                        .OrderBy(f => f.Order)
+                        .Select(f =>
+                        {
+                            sectionValues.TryGetValue(f.FieldKey, out var value);
+                            return new LeadFormFieldDto
+                            {
+                                FieldKey = f.FieldKey,
+                                Label = f.Label,
+                                DataType = f.DataType,
+                                ControlType = f.ControlType,
+                                Required = f.Required,
+                                ReadOnly = f.ReadOnly,
+                                DisplayOrder = f.Order,
+                                Value = value
+                            };
+                        })
+                        .ToList()
+                };
+            })
+            .ToList();
 
-                sb.Append(char.ToLower(c, CultureInfo.InvariantCulture));
-            }
-            else
-            {
-                sb.Append(c);
-            }
-        }
-
-        return sb.ToString();
+        return Task.FromResult(new LeadExampleFormDto
+        {
+            Sections = sections,
+            ValuesBySection = CrmLeadsExamplePayload.ValuesBySection
+        });
     }
 }
