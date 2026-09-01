@@ -43,6 +43,11 @@ public static class LeadEndpoints
             .WithName("GetLeads" + nameSuffix)
             .Produces<PagedResponse<LeadDto>>(StatusCodes.Status200OK);
 
+        // Static UI example (schema + sample values). Register before /{id} routes.
+        leads.MapGet("/example", GetLeadExampleFormAsync)
+            .WithName("GetLeadExampleForm" + nameSuffix)
+            .Produces<ApiResponse<LeadExampleFormDto>>(StatusCodes.Status200OK);
+
         leads.MapGet("/{id:guid}", GetLeadByIdAsync)
             .WithName("GetLeadById" + nameSuffix)
             .Produces<ApiResponse<LeadDto>>(StatusCodes.Status200OK)
@@ -137,6 +142,14 @@ public static class LeadEndpoints
     {
         var result = await mediator.Send(new GetLeadByIdQuery(id), cancellationToken);
         return Results.Ok(ApiResponse<LeadDto>.Ok(result));
+    }
+
+    private static async Task<IResult> GetLeadExampleFormAsync(
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetLeadExampleFormQuery(), cancellationToken);
+        return Results.Ok(ApiResponse<LeadExampleFormDto>.Ok(result));
     }
 
     private static async Task<IResult> GetLeadFormDataAsync(

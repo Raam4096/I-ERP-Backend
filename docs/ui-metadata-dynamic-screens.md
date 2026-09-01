@@ -60,13 +60,14 @@ Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that ret
 | Procurement Hub | Purchase Requests, Purchase Orders, Supplier Invoices |
 | Inventory & Supply Chain | Item Management, Warehouse Management, Stock Transfers |
 | Finance & Treasury | General Ledger, Accounts Payable, Accounts Receivable |
-| CRM & Customer Engagement | CRM Mission Control, **Lead Management** (full form), Contact Directory, **Opportunity Pipeline** (basic fields), Activities & Follow-Ups, Campaign Manager |
+| **CRM** (display name only) | **Leads** (full form), **Opportunities** — no other CRM screens |
 | HR & Payroll | Employee Management, Leave Management, Payroll Processing |
 | Project Management | Project Portfolio, Project Tasks, Project Billing |
 | Manufacturing | Production Planning, Work Orders, Quality Control |
 
-- **Implemented** screens: `renderMode = "generic"` + real `apiBasePath` (Lead Management / Opportunity Pipeline).  
-- **Not implemented yet**: `renderMode = "under_implementation"` + stub section description — UI should show “Under implementation” when there is no usable data/API.
+- **CRM is strict**: module `code=crm`, `name=CRM`, screens = `crm-leads` (Leads) + `crm-opportunities` (Opportunities) only. Extra CRM screens are soft-deleted on seed.
+- **Implemented**: `renderMode = "generic"` for CRM Leads / Opportunities.  
+- **Other modules**: stub screens with `renderMode = "under_implementation"` until built — do not invent extra screens.
 
 Seeder runs on **startup for every tenant**. Redeploy/restart after pull so Railway DB picks up new modules/screens.
 
@@ -83,10 +84,18 @@ Response `data[]` shape:
     {
       "id": "...",
       "code": "crm-leads",
-      "name": "CRM Leads",
+      "name": "Leads",
       "route": "/crm/leads",
       "entityName": "crm-leads",
       "apiBasePath": "/api/v1/crm/leads"
+    },
+    {
+      "id": "...",
+      "code": "crm-opportunities",
+      "name": "Opportunities",
+      "route": "/crm/opportunities",
+      "entityName": "crm-opportunities",
+      "apiBasePath": "/api/v1/crm/opportunities"
     }
   ]
 }
@@ -135,7 +144,15 @@ CRM Leads is seeded with UI sections:
 | `additional_information` | Additional Information |
 | `follow_ups` | Follow-ups |
 
-Each section includes `description` and ordered `fields` (`fieldKey` is **camelCase**, matching CRM lead APIs: `companyName`, `phone`, …).
+Each section includes `description` and ordered `fields`. **`fieldKey` is snake_case** (UI contract): `company_name`, `phone_number`, …
+
+### Example payload (layout / demo — no DB row required)
+
+```http
+GET /api/v1/crm/leads/example
+```
+
+Returns schema + the canonical sample `valuesBySection` (Nexus Innovations …).
 
 ### Values (section-wise, with existing lead data)
 
@@ -159,7 +176,7 @@ Returns:
         "description": "Core company and contact details for the lead.",
         "fields": [
           {
-            "fieldKey": "companyName",
+            "fieldKey": "company_name",
             "label": "Company Name",
             "dataType": "text",
             "controlType": "input",
@@ -173,20 +190,23 @@ Returns:
     ],
     "valuesBySection": {
       "primary_information": {
-        "companyName": "Nexus Innovations Pvt Ltd",
         "company_name": "Nexus Innovations Pvt Ltd",
-        "contactPerson": "Rajesh Kumar",
-        "phone": "+91 98765 43210"
+        "contact_person": "Rajesh Kumar",
+        "phone_number": "+91 98765 43210",
+        "email": "rajesh.kumar@nexusinnovations.com"
       },
-      "classification": { "subsidiary": "..." },
-      "additional_information": { "projectDescription": "...", "notes": "..." },
-      "follow_ups": { "followUpDate": "...", "followUpStatus": "..." }
+      "classification": { "subsidiary": "Nexus Global Tech Solutions" },
+      "additional_information": { "project_description": "...", "notes": "..." },
+      "follow_ups": {
+        "follow_up_date": "08/28/2026",
+        "follow_up_status": "Scheduled"
+      }
     }
   }
 }
 ```
 
-`valuesBySection` includes both camelCase and snake_case aliases so either UI style works. Prefer camelCase when calling create/update lead APIs.
+Create/update lead REST body still uses camelCase DTO properties (`companyName`, `phone`, …). Map UI snake_case → API camelCase on write.
 
 ### Hybrid / seeded screens (e.g. CRM Leads) — schema only
 
@@ -200,7 +220,7 @@ Returns **GenericPage** (already merges custom fields + **current user’s** hid
 {
   "screen": {
     "code": "crm-leads",
-    "name": "CRM Leads",
+    "name": "Leads",
     "route": "/crm/leads",
     "renderMode": "generic",
     "entityName": "crm-leads",
@@ -209,12 +229,12 @@ Returns **GenericPage** (already merges custom fields + **current user’s** hid
   "layout": { "mode": "form-with-grid", "columns": 12 },
   "sections": [
     {
-      "code": "main",
-      "title": "Lead Details",
+      "code": "primary_information",
+      "title": "Primary Information",
       "type": "header",
       "fields": [
         {
-          "fieldKey": "companyName",
+          "fieldKey": "company_name",
           "label": "Company Name",
           "dataType": "string",
           "controlType": "input",

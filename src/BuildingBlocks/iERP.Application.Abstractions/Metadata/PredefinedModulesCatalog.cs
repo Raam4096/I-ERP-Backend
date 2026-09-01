@@ -1,9 +1,9 @@
 namespace iERP.Application.Abstractions.Metadata;
 
 /// <summary>
-/// Product (predefined) modules/screens matching the i-ERP UI settings catalog.
-/// Seeded into metadata for every tenant. Screens without a backend set
-/// <see cref="PredefinedScreenSpec.RenderMode"/> to <c>under_implementation</c>.
+/// Product (predefined) modules/screens. Only CRM Leads + Opportunities are implemented.
+/// All other screens are intentional stubs (<c>under_implementation</c>) until built.
+/// Do not invent extra CRM screens — CRM has exactly two: Leads and Opportunities.
 /// </summary>
 public static class PredefinedModulesCatalog
 {
@@ -36,27 +36,23 @@ public static class PredefinedModulesCatalog
             Screen("accounts-payable", "Accounts Payable", "/finance/ap", "/api/v1/finance/ap"),
             Screen("accounts-receivable", "Accounts Receivable", "/finance/ar", "/api/v1/finance/ar"),
         ]),
-        new("crm", "CRM & Customer Engagement", "Customer relationship management",
+        // Strict: CRM has ONLY Leads + Opportunities. No other CRM screens.
+        new("crm", "CRM", "Customer relationship management",
         [
-            Screen("crm-mission-control", "CRM Mission Control", "/crm/mission-control", "/api/v1/dashboard/snapshot"),
-            // Implemented Hybrid screens — full field layouts seeded separately.
             new PredefinedScreenSpec(
                 CrmLeadsScreenCatalog.ScreenCode,
-                "Lead Management",
+                CrmLeadsScreenCatalog.ScreenName,
                 CrmLeadsScreenCatalog.Route,
                 CrmLeadsScreenCatalog.ApiBasePath,
                 GenericRenderMode,
                 IsImplemented: true),
-            Screen("contact-directory", "Contact Directory", "/crm/contacts", "/api/v1/customers"),
             new PredefinedScreenSpec(
-                "crm-opportunities",
-                "Opportunity Pipeline",
-                "/crm/opportunities",
-                "/api/v1/crm/opportunities",
+                CrmOpportunitiesScreenCatalog.ScreenCode,
+                CrmOpportunitiesScreenCatalog.ScreenName,
+                CrmOpportunitiesScreenCatalog.Route,
+                CrmOpportunitiesScreenCatalog.ApiBasePath,
                 GenericRenderMode,
                 IsImplemented: true),
-            Screen("activities-follow-ups", "Activities & Follow-Ups", "/crm/activities", "/api/v1/crm/activities"),
-            Screen("campaign-manager", "Campaign Manager", "/crm/campaigns", "/api/v1/crm/campaigns"),
         ]),
         new("hr-payroll", "HR & Payroll", "Employees, leave, and payroll",
         [
