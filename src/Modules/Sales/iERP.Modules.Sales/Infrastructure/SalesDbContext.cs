@@ -14,6 +14,9 @@ public sealed class SalesDbContext : DbContext
         _tenantContext = tenantContext;
     }
 
+    public DbSet<SalesEnquiry> SalesEnquiries => Set<SalesEnquiry>();
+    public DbSet<SalesEnquiryLine> SalesEnquiryLines => Set<SalesEnquiryLine>();
+    public DbSet<SalesEnquiryFollowUp> SalesEnquiryFollowUps => Set<SalesEnquiryFollowUp>();
     public DbSet<SalesQuotation> SalesQuotations => Set<SalesQuotation>();
     public DbSet<SalesQuotationLine> SalesQuotationLines => Set<SalesQuotationLine>();
     public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();

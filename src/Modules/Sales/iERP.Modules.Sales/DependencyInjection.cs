@@ -1,6 +1,6 @@
 using iERP.Infrastructure.Persistence.Interceptors;
+using iERP.Modules.Sales.Application;
 using iERP.Modules.Sales.Infrastructure;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +22,7 @@ public static class DependencyInjection
                 sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
+        services.AddScoped<ISalesDocumentsService, SalesDocumentsService>();
         return services;
     }
 }

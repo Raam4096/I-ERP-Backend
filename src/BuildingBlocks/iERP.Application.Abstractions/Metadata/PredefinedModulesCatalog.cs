@@ -1,9 +1,10 @@
 namespace iERP.Application.Abstractions.Metadata;
 
 /// <summary>
-/// Product (predefined) modules/screens. Only CRM Leads + Opportunities are implemented.
-/// All other screens are intentional stubs (<c>under_implementation</c>) until built.
-/// Do not invent extra CRM screens — CRM has exactly two: Leads and Opportunities.
+/// Product (predefined) modules/screens.
+/// CRM: Leads + Opportunities only.
+/// Sales: Sales Enquiry + Quotation + Invoice only.
+/// Other modules stay stubs until implemented.
 /// </summary>
 public static class PredefinedModulesCatalog
 {
@@ -12,11 +13,30 @@ public static class PredefinedModulesCatalog
 
     public static IReadOnlyList<PredefinedModuleSpec> Modules { get; } =
     [
-        new("sales-distribution", "Sales & Distribution", "Sales quotations, orders, and invoicing",
+        // Strict: Sales has ONLY Enquiry, Quotation, Invoice.
+        new("sales", "Sales", "Sales enquiry, quotation, and invoicing",
         [
-            Screen("quotation-management", "Quotation Management", "/sales/quotations", "/api/v1/sales_quotations"),
-            Screen("sales-orders", "Sales Orders", "/sales/orders", "/api/v1/sales_orders"),
-            Screen("invoice-management", "Invoice Management", "/sales/invoices", "/api/v1/sales/invoices"),
+            new PredefinedScreenSpec(
+                SalesEnquiryScreenCatalog.ScreenCode,
+                SalesEnquiryScreenCatalog.ScreenName,
+                SalesEnquiryScreenCatalog.Route,
+                SalesEnquiryScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesQuotationScreenCatalog.ScreenCode,
+                SalesQuotationScreenCatalog.ScreenName,
+                SalesQuotationScreenCatalog.Route,
+                SalesQuotationScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesInvoiceScreenCatalog.ScreenCode,
+                SalesInvoiceScreenCatalog.ScreenName,
+                SalesInvoiceScreenCatalog.Route,
+                SalesInvoiceScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
         ]),
         new("procurement-hub", "Procurement Hub", "Purchase requests, orders, and supplier invoices",
         [
@@ -36,7 +56,7 @@ public static class PredefinedModulesCatalog
             Screen("accounts-payable", "Accounts Payable", "/finance/ap", "/api/v1/finance/ap"),
             Screen("accounts-receivable", "Accounts Receivable", "/finance/ar", "/api/v1/finance/ar"),
         ]),
-        // Strict: CRM has ONLY Leads + Opportunities. No other CRM screens.
+        // Strict: CRM has ONLY Leads + Opportunities.
         new("crm", "CRM", "Customer relationship management",
         [
             new PredefinedScreenSpec(

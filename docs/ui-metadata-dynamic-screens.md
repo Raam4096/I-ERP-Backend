@@ -56,7 +56,7 @@ Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that ret
 
 | Module | Screens |
 |--------|---------|
-| Sales & Distribution | Quotation Management, Sales Orders, Invoice Management |
+| **Sales** | **Sales Enquiry**, **Quotation**, **Invoice** — no other Sales screens |
 | Procurement Hub | Purchase Requests, Purchase Orders, Supplier Invoices |
 | Inventory & Supply Chain | Item Management, Warehouse Management, Stock Transfers |
 | Finance & Treasury | General Ledger, Accounts Payable, Accounts Receivable |
@@ -65,8 +65,9 @@ Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that ret
 | Project Management | Project Portfolio, Project Tasks, Project Billing |
 | Manufacturing | Production Planning, Work Orders, Quality Control |
 
-- **CRM is strict**: module `code=crm`, `name=CRM`, screens = `crm-leads` (Leads) + `crm-opportunities` (Opportunities) only. Extra CRM screens are soft-deleted on seed.
-- **Implemented**: `renderMode = "generic"` for CRM Leads / Opportunities.  
+- **CRM is strict**: module `code=crm`, `name=CRM`, screens = `crm-leads` + `crm-opportunities` only.
+- **Sales is strict**: module `code=sales`, `name=Sales`, screens = `sales-enquiries`, `sales-quotations`, `sales-invoices` only.
+- **Implemented**: `renderMode = "generic"` for CRM Leads/Opportunities and Sales Enquiry/Quotation/Invoice.
 - **Other modules**: stub screens with `renderMode = "under_implementation"` until built — do not invent extra screens.
 
 Seeder runs on **startup for every tenant**. Redeploy/restart after pull so Railway DB picks up new modules/screens.

@@ -7,6 +7,9 @@ Related backend detail: [crm-lead-management.md](./crm-lead-management.md)
 **Metadata-driven UI / Screen Architect / per-user field layout:**  
 → **[ui-metadata-dynamic-screens.md](./ui-metadata-dynamic-screens.md)** (share this with UI for ProcessFlow GenericPage work)
 
+**Sales module (Enquiry / Quotation / Invoice):**  
+→ **[ui-sales-module.md](./ui-sales-module.md)**
+
 ---
 
 ## 1. Base URLs
