@@ -36,11 +36,20 @@ public sealed class MetadataScreenService : IMetadataScreenService
         }
 
         var code = screenCode.Trim();
+        var codeLower = code.ToLowerInvariant();
+        var tenantId = _tenantContext.TenantId
+            ?? throw new ForbiddenException("Tenant context is required.", ErrorCodes.TenantNotFound);
+
+        // Explicit tenant + soft-delete (IgnoreQueryFilters) so seeded screens remain resolvable
+        // even if include/filter edge cases hide them from the default query filter path.
         var screen = await _db.ScreenDefinitions
+            .IgnoreQueryFilters()
             .AsNoTracking()
-            .Include(x => x.Sections)
-            .ThenInclude(s => s.Fields)
-            .FirstOrDefaultAsync(x => x.Code == code, cancellationToken)
+            .Include(x => x.Sections.Where(s => !s.IsDeleted && s.TenantId == tenantId))
+            .ThenInclude(s => s.Fields.Where(f => !f.IsDeleted && f.TenantId == tenantId))
+            .FirstOrDefaultAsync(
+                x => x.TenantId == tenantId && !x.IsDeleted && x.Code.ToLower() == codeLower,
+                cancellationToken)
             ?? throw new NotFoundException($"Screen '{code}' was not found.");
 
         var entityKey = string.IsNullOrWhiteSpace(screen.EntityName) ? screen.Code : screen.EntityName;

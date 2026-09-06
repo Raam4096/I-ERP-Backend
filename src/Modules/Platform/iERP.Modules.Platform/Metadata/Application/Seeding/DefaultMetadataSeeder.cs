@@ -12,15 +12,17 @@ namespace iERP.Modules.Platform.Metadata.Application.Seeding;
 
 /// <summary>
 /// Seeds all predefined product modules/screens for every tenant.
-/// CRM is strict: display name "CRM", screens = Leads + Opportunities only.
-/// Extra CRM screens previously seeded are soft-deleted. Other modules stay stubs
-/// (<c>renderMode = under_implementation</c>) until implemented.
+/// CRM: Leads + Opportunities only. Sales: Enquiry + Quotation + Invoice only.
+/// Extra screens/modules previously seeded are soft-deleted.
 /// </summary>
 public sealed class DefaultMetadataSeeder : IDataSeeder
 {
     public const string CrmModuleCode = CrmLeadsScreenCatalog.ModuleCode;
     public const string CrmLeadsScreenCode = CrmLeadsScreenCatalog.ScreenCode;
     public const string CrmOpportunitiesScreenCode = CrmOpportunitiesScreenCatalog.ScreenCode;
+    public const string SalesEnquiryScreenCode = SalesEnquiryScreenCatalog.ScreenCode;
+    public const string SalesQuotationScreenCode = SalesQuotationScreenCatalog.ScreenCode;
+    public const string SalesInvoiceScreenCode = SalesInvoiceScreenCatalog.ScreenCode;
 
     private readonly MetadataDbContext _db;
     private readonly PlatformDbContext _platformDb;
@@ -92,6 +94,28 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
                     continue;
                 }
 
+                if (screenSpec.Code is SalesEnquiryScreenCode or SalesQuotationScreenCode or SalesInvoiceScreenCode)
+                {
+                    var sections = screenSpec.Code switch
+                    {
+                        SalesEnquiryScreenCode => SalesEnquiryScreenCatalog.Sections,
+                        SalesQuotationScreenCode => SalesQuotationScreenCatalog.Sections,
+                        _ => SalesInvoiceScreenCatalog.Sections
+                    };
+
+                    if (await EnsureCatalogScreenLayoutAsync(
+                            tenantId,
+                            module.Id,
+                            screenSpec,
+                            sections,
+                            cancellationToken))
+                    {
+                        changedScreens++;
+                    }
+
+                    continue;
+                }
+
                 if (await EnsureStubOrBasicScreenAsync(tenantId, module.Id, screenSpec, cancellationToken))
                 {
                     changedScreens++;
@@ -105,6 +129,12 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
                 moduleSpec.Screens.Select(s => s.Code).ToHashSet(StringComparer.OrdinalIgnoreCase),
                 cancellationToken);
         }
+
+        // Soft-delete predefined modules that were removed from the catalog (e.g. sales-distribution).
+        await DeactivateOrphanModulesAsync(
+            tenantId,
+            PredefinedModulesCatalog.Modules.Select(m => m.Code).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            cancellationToken);
 
         _logger.LogInformation(
             "Predefined metadata sync for tenant {TenantId}: {ModuleCount} modules catalogued, {ScreenChanges} screen create/update(s)",
@@ -156,6 +186,225 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         }
 
         return changed;
+    }
+
+    private async Task DeactivateOrphanModulesAsync(
+        Guid tenantId,
+        HashSet<string> allowedCodes,
+        CancellationToken cancellationToken)
+    {
+        var orphans = await _db.ModuleDefinitions
+            .IgnoreQueryFilters()
+            .Include(x => x.Screens)
+            .ThenInclude(s => s.Sections)
+            .ThenInclude(sec => sec.Fields)
+            .Where(x => x.TenantId == tenantId && !x.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        var now = _clock.UtcNow;
+        var changed = false;
+        foreach (var module in orphans.Where(m => !allowedCodes.Contains(m.Code)))
+        {
+            foreach (var screen in module.Screens.Where(s => !s.IsDeleted))
+            {
+                foreach (var section in screen.Sections.Where(s => !s.IsDeleted))
+                {
+                    foreach (var field in section.Fields.Where(f => !f.IsDeleted))
+                    {
+                        field.SoftDelete(null, now);
+                    }
+
+                    section.SoftDelete(null, now);
+                }
+
+                screen.SoftDelete(null, now);
+            }
+
+            module.SoftDelete(null, now);
+            changed = true;
+            _logger.LogInformation(
+                "Soft-deleted orphan metadata module {ModuleCode} for tenant {TenantId} (not in predefined catalog)",
+                module.Code,
+                tenantId);
+        }
+
+        if (changed)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private async Task<bool> EnsureCatalogScreenLayoutAsync(
+        Guid tenantId,
+        Guid moduleId,
+        PredefinedScreenSpec screenSpec,
+        IReadOnlyList<ScreenSectionSpec> sectionSpecs,
+        CancellationToken cancellationToken)
+    {
+        var screen = await _db.ScreenDefinitions
+            .IgnoreQueryFilters()
+            .Include(x => x.Sections)
+            .ThenInclude(s => s.Fields)
+            .FirstOrDefaultAsync(
+                x => x.TenantId == tenantId && x.Code == screenSpec.Code,
+                cancellationToken);
+
+        var changed = false;
+        if (screen is null)
+        {
+            screen = new ScreenDefinition
+            {
+                ModuleDefinitionId = moduleId,
+                Code = screenSpec.Code,
+                Name = screenSpec.Name,
+                Route = screenSpec.Route,
+                RenderMode = screenSpec.RenderMode,
+                EntityName = screenSpec.Code,
+                ApiBasePath = screenSpec.ApiBasePath,
+                WorkflowEnabled = false,
+                PrintEnabled = false,
+                AiEnabled = false
+            };
+            screen.SetTenantId(tenantId);
+            _db.ScreenDefinitions.Add(screen);
+            changed = true;
+        }
+        else
+        {
+            if (screen.IsDeleted)
+            {
+                screen.IsDeleted = false;
+                screen.DeletedAt = null;
+                screen.DeletedBy = null;
+                changed = true;
+            }
+
+            screen.ModuleDefinitionId = moduleId;
+            screen.Name = screenSpec.Name;
+            screen.Route = screenSpec.Route;
+            screen.ApiBasePath = screenSpec.ApiBasePath;
+            screen.EntityName = screenSpec.Code;
+            screen.RenderMode = screenSpec.RenderMode;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var catalogCodes = sectionSpecs.Select(x => x.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var now = _clock.UtcNow;
+
+        foreach (var section in screen.Sections.Where(s => !s.IsDeleted && !catalogCodes.Contains(s.Code)))
+        {
+            foreach (var field in section.Fields.Where(f => !f.IsDeleted))
+            {
+                field.SoftDelete(null, now);
+            }
+
+            section.SoftDelete(null, now);
+            changed = true;
+        }
+
+        foreach (var spec in sectionSpecs.OrderBy(x => x.Order))
+        {
+            var section = screen.Sections.FirstOrDefault(s =>
+                s.Code.Equals(spec.Code, StringComparison.OrdinalIgnoreCase));
+
+            if (section is null)
+            {
+                section = new SectionDefinition
+                {
+                    ScreenDefinitionId = screen.Id,
+                    Code = spec.Code,
+                    Name = spec.Name,
+                    Description = spec.Description,
+                    DisplayOrder = spec.Order
+                };
+                section.SetTenantId(tenantId);
+                screen.Sections.Add(section);
+                _db.SectionDefinitions.Add(section);
+                changed = true;
+            }
+            else
+            {
+                if (section.IsDeleted)
+                {
+                    section.IsDeleted = false;
+                    section.DeletedAt = null;
+                    section.DeletedBy = null;
+                    changed = true;
+                }
+
+                if (section.Name != spec.Name
+                    || section.Description != spec.Description
+                    || section.DisplayOrder != spec.Order)
+                {
+                    section.Name = spec.Name;
+                    section.Description = spec.Description;
+                    section.DisplayOrder = spec.Order;
+                    changed = true;
+                }
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var specKeys = spec.Fields.Select(f => f.FieldKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in section.Fields.Where(f => !f.IsDeleted && !specKeys.Contains(f.FieldKey)))
+            {
+                field.SoftDelete(null, now);
+                changed = true;
+            }
+
+            foreach (var fieldSpec in spec.Fields.OrderBy(x => x.Order))
+            {
+                var field = section.Fields.FirstOrDefault(f =>
+                    f.FieldKey.Equals(fieldSpec.FieldKey, StringComparison.OrdinalIgnoreCase));
+
+                if (field is null)
+                {
+                    field = new FieldDefinition
+                    {
+                        SectionDefinitionId = section.Id,
+                        FieldKey = fieldSpec.FieldKey,
+                        Label = fieldSpec.Label,
+                        DataType = fieldSpec.DataType,
+                        ControlType = fieldSpec.ControlType,
+                        DisplayOrder = fieldSpec.Order,
+                        IsRequired = fieldSpec.Required,
+                        IsReadOnly = fieldSpec.ReadOnly,
+                        IsVisible = true,
+                        Width = 3
+                    };
+                    field.SetTenantId(tenantId);
+                    section.Fields.Add(field);
+                    changed = true;
+                }
+                else
+                {
+                    if (field.IsDeleted)
+                    {
+                        field.IsDeleted = false;
+                        field.DeletedAt = null;
+                        field.DeletedBy = null;
+                        changed = true;
+                    }
+
+                    field.Label = fieldSpec.Label;
+                    field.DataType = fieldSpec.DataType;
+                    field.ControlType = fieldSpec.ControlType;
+                    field.DisplayOrder = fieldSpec.Order;
+                    field.IsRequired = fieldSpec.Required;
+                    field.IsReadOnly = fieldSpec.ReadOnly;
+                    field.IsVisible = true;
+                }
+            }
+        }
+
+        if (changed || _db.ChangeTracker.HasChanges())
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        return false;
     }
 
     private async Task<ModuleDefinition> EnsureModuleAsync(

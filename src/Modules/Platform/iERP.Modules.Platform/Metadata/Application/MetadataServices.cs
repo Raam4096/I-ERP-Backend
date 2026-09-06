@@ -57,10 +57,18 @@ public sealed class MetadataCatalogService : IMetadataCatalogService
     {
         EnsureTenant();
 
-        var metadataModules = await _metadataDb.ModuleDefinitions
+        // Always merge both sources. `activeOnly` only filters IsActive within each source —
+        // it must never pick metadata XOR dynamic (that broke Railway navbar).
+        var metadataQuery = _metadataDb.ModuleDefinitions
             .AsNoTracking()
             .Include(x => x.Screens)
-            .Where(x => !activeOnly || x.IsActive)
+            .AsQueryable();
+        if (activeOnly)
+        {
+            metadataQuery = metadataQuery.Where(x => x.IsActive);
+        }
+
+        var metadataModules = await metadataQuery
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
@@ -87,16 +95,28 @@ public sealed class MetadataCatalogService : IMetadataCatalogService
                 .ToList()
         }).ToList();
 
-        var dynamicModules = await _platformDb.DynamicModuleDefinitions
+        var dynamicQuery = _platformDb.DynamicModuleDefinitions
             .AsNoTracking()
-            .Where(x => !activeOnly || x.IsActive)
+            .AsQueryable();
+        if (activeOnly)
+        {
+            dynamicQuery = dynamicQuery.Where(x => x.IsActive);
+        }
+
+        var dynamicModules = await dynamicQuery
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
         var dynamicModuleIds = dynamicModules.Select(x => x.Id).ToList();
-        var dynamicEntities = await _platformDb.DynamicEntityDefinitions
+        var entityQuery = _platformDb.DynamicEntityDefinitions
             .AsNoTracking()
-            .Where(x => dynamicModuleIds.Contains(x.DynamicModuleDefinitionId) && (!activeOnly || x.IsActive))
+            .Where(x => dynamicModuleIds.Contains(x.DynamicModuleDefinitionId));
+        if (activeOnly)
+        {
+            entityQuery = entityQuery.Where(x => x.IsActive);
+        }
+
+        var dynamicEntities = await entityQuery
             .OrderBy(x => x.DisplayName)
             .ToListAsync(cancellationToken);
 
