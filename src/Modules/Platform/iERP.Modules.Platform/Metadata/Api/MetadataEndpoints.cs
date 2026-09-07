@@ -66,6 +66,7 @@ public static class MetadataEndpoints
         bool? activeOnly,
         CancellationToken cancellationToken)
     {
+        // Default true: predefined metadata (always) + active dynamic modules.
         var modules = await catalogService.ListModulesAsync(activeOnly ?? true, cancellationToken);
         return Results.Ok(ApiResponse<IReadOnlyList<MetadataModuleDto>>.Ok(modules));
     }
