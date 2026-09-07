@@ -26,6 +26,14 @@ public sealed class SalesInvoice : AuditableEntity
     public string? Payment { get; set; }
     public string? Notes { get; set; }
 
+    /// <summary>Optional link to a sales order (no FK — open for workflow changes).</summary>
+    public Guid? SourceOrderId { get; set; }
+    public string? SourceOrderCode { get; set; }
+
+    /// <summary>Optional link to a sales quotation.</summary>
+    public Guid? SourceQuotationId { get; set; }
+    public string? SourceQuotationCode { get; set; }
+
     public Guid? SubsidiaryId { get; set; }
     public Guid? CustomerId { get; set; }
     public decimal Subtotal { get; set; }

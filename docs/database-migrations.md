@@ -4,6 +4,18 @@ Migrations are centralized in `src/iERP.Migrations`.
 
 Each module DbContext has its own migration history and schema.
 
+## Startup (Railway / API)
+
+On API boot, `Program.cs` applies pending migrations for:
+
+- `PlatformDbContext`
+- `IdentityDbContext`
+- `MetadataDbContext`
+- `CrmDbContext`
+- `SalesDbContext`
+
+Redeploy the API after adding Sales (or other listed) migrations so production schemas are created automatically.
+
 ## Commands
 
 ```bash

@@ -45,6 +45,7 @@ using iERP.Modules.Reporting;
 using iERP.Modules.Reporting.Api;
 using iERP.Modules.Sales;
 using iERP.Modules.Sales.Api;
+using iERP.Modules.Sales.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -150,6 +151,9 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     var crmDb = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
     await crmDb.Database.MigrateAsync();
+
+    var salesDb = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+    await salesDb.Database.MigrateAsync();
 
     var authSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentAuthSeeder>();
     await authSeeder.SeedAsync();

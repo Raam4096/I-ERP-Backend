@@ -3,12 +3,11 @@ using iERP.SharedKernel.Primitives;
 namespace iERP.Modules.Sales.Domain;
 
 /// <summary>
-/// Customer credit note. Optional <see cref="SourceInvoiceId"/> links to an invoice for
-/// adjustments without locking the workflow.
+/// Customer debit note (amount owed by customer). Optional invoice link for enhancements.
 /// </summary>
-public sealed class CreditNote : AuditableEntity
+public sealed class DebitNote : AuditableEntity
 {
-    private readonly List<CreditNoteLine> _lines = [];
+    private readonly List<DebitNoteLine> _lines = [];
 
     public string NoteCode { get; set; } = string.Empty;
     public string Customer { get; set; } = string.Empty;
@@ -41,18 +40,18 @@ public sealed class CreditNote : AuditableEntity
     public decimal TaxAmount { get; set; }
     public decimal TotalAmount { get; set; }
 
-    public IReadOnlyCollection<CreditNoteLine> Lines => _lines.AsReadOnly();
+    public IReadOnlyCollection<DebitNoteLine> Lines => _lines.AsReadOnly();
 
-    public void ReplaceLines(IEnumerable<CreditNoteLine> lines)
+    public void ReplaceLines(IEnumerable<DebitNoteLine> lines)
     {
         _lines.Clear();
         _lines.AddRange(lines);
     }
 }
 
-public sealed class CreditNoteLine : AuditableEntity
+public sealed class DebitNoteLine : AuditableEntity
 {
-    public Guid CreditNoteId { get; set; }
+    public Guid DebitNoteId { get; set; }
     public int LineNo { get; set; }
     public string? Category { get; set; }
     public string? Item { get; set; }

@@ -25,7 +25,10 @@ public static class SalesEndpoints
 
         MapEnquiries(app);
         MapQuotations(app);
+        MapOrders(app);
         MapInvoices(app);
+        MapCreditNotes(app);
+        MapDebitNotes(app);
         return app;
     }
 
@@ -88,6 +91,34 @@ public static class SalesEndpoints
         });
     }
 
+    private static void MapOrders(IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/sales/orders")
+            .WithTags("Sales Orders")
+            .RequireAuthorization();
+
+        group.MapGet("/", async (ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<IReadOnlyList<SalesOrderDto>>.Ok(await svc.ListOrdersAsync(ct))));
+
+        group.MapGet("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<SalesOrderDto>.Ok(await svc.GetOrderAsync(id, ct))));
+
+        group.MapPost("/", async ([FromBody] UpsertSalesOrderRequest request, ISalesDocumentsService svc, CancellationToken ct) =>
+        {
+            var created = await svc.CreateOrderAsync(request, ct);
+            return Results.Created($"/api/v1/sales/orders/{created.Id}", ApiResponse<SalesOrderDto>.Ok(created, "Order created."));
+        });
+
+        group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpsertSalesOrderRequest request, ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<SalesOrderDto>.Ok(await svc.UpdateOrderAsync(id, request, ct), "Order updated.")));
+
+        group.MapDelete("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
+        {
+            await svc.DeleteOrderAsync(id, ct);
+            return Results.NoContent();
+        });
+    }
+
     private static void MapInvoices(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/sales/invoices")
@@ -112,6 +143,62 @@ public static class SalesEndpoints
         group.MapDelete("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
         {
             await svc.DeleteInvoiceAsync(id, ct);
+            return Results.NoContent();
+        });
+    }
+
+    private static void MapCreditNotes(IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/sales/credit-notes")
+            .WithTags("Sales Credit Notes")
+            .RequireAuthorization();
+
+        group.MapGet("/", async (ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<IReadOnlyList<SalesAdjustmentNoteDto>>.Ok(await svc.ListCreditNotesAsync(ct))));
+
+        group.MapGet("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<SalesAdjustmentNoteDto>.Ok(await svc.GetCreditNoteAsync(id, ct))));
+
+        group.MapPost("/", async ([FromBody] UpsertSalesAdjustmentNoteRequest request, ISalesDocumentsService svc, CancellationToken ct) =>
+        {
+            var created = await svc.CreateCreditNoteAsync(request, ct);
+            return Results.Created($"/api/v1/sales/credit-notes/{created.Id}", ApiResponse<SalesAdjustmentNoteDto>.Ok(created, "Credit note created."));
+        });
+
+        group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpsertSalesAdjustmentNoteRequest request, ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<SalesAdjustmentNoteDto>.Ok(await svc.UpdateCreditNoteAsync(id, request, ct), "Credit note updated.")));
+
+        group.MapDelete("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
+        {
+            await svc.DeleteCreditNoteAsync(id, ct);
+            return Results.NoContent();
+        });
+    }
+
+    private static void MapDebitNotes(IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/sales/debit-notes")
+            .WithTags("Sales Debit Notes")
+            .RequireAuthorization();
+
+        group.MapGet("/", async (ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<IReadOnlyList<SalesAdjustmentNoteDto>>.Ok(await svc.ListDebitNotesAsync(ct))));
+
+        group.MapGet("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<SalesAdjustmentNoteDto>.Ok(await svc.GetDebitNoteAsync(id, ct))));
+
+        group.MapPost("/", async ([FromBody] UpsertSalesAdjustmentNoteRequest request, ISalesDocumentsService svc, CancellationToken ct) =>
+        {
+            var created = await svc.CreateDebitNoteAsync(request, ct);
+            return Results.Created($"/api/v1/sales/debit-notes/{created.Id}", ApiResponse<SalesAdjustmentNoteDto>.Ok(created, "Debit note created."));
+        });
+
+        group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpsertSalesAdjustmentNoteRequest request, ISalesDocumentsService svc, CancellationToken ct) =>
+            Results.Ok(ApiResponse<SalesAdjustmentNoteDto>.Ok(await svc.UpdateDebitNoteAsync(id, request, ct), "Debit note updated.")));
+
+        group.MapDelete("/{id:guid}", async (Guid id, ISalesDocumentsService svc, CancellationToken ct) =>
+        {
+            await svc.DeleteDebitNoteAsync(id, ct);
             return Results.NoContent();
         });
     }

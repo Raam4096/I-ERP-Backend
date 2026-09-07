@@ -12,7 +12,8 @@ namespace iERP.Modules.Platform.Metadata.Application.Seeding;
 
 /// <summary>
 /// Seeds all predefined product modules/screens for every tenant.
-/// CRM: Leads + Opportunities only. Sales: Enquiry + Quotation + Invoice only.
+/// CRM: Leads + Opportunities only.
+/// Sales: Enquiry, Quotation, Orders, Debit/Credit Notes, Invoice.
 /// Extra screens/modules previously seeded are soft-deleted.
 /// </summary>
 public sealed class DefaultMetadataSeeder : IDataSeeder
@@ -22,6 +23,9 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
     public const string CrmOpportunitiesScreenCode = CrmOpportunitiesScreenCatalog.ScreenCode;
     public const string SalesEnquiryScreenCode = SalesEnquiryScreenCatalog.ScreenCode;
     public const string SalesQuotationScreenCode = SalesQuotationScreenCatalog.ScreenCode;
+    public const string SalesOrderScreenCode = SalesOrderScreenCatalog.ScreenCode;
+    public const string SalesCreditNoteScreenCode = SalesCreditNoteScreenCatalog.ScreenCode;
+    public const string SalesDebitNoteScreenCode = SalesDebitNoteScreenCatalog.ScreenCode;
     public const string SalesInvoiceScreenCode = SalesInvoiceScreenCatalog.ScreenCode;
 
     private readonly MetadataDbContext _db;
@@ -94,12 +98,20 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
                     continue;
                 }
 
-                if (screenSpec.Code is SalesEnquiryScreenCode or SalesQuotationScreenCode or SalesInvoiceScreenCode)
+                if (screenSpec.Code is SalesEnquiryScreenCode
+                    or SalesQuotationScreenCode
+                    or SalesOrderScreenCode
+                    or SalesCreditNoteScreenCode
+                    or SalesDebitNoteScreenCode
+                    or SalesInvoiceScreenCode)
                 {
                     var sections = screenSpec.Code switch
                     {
                         SalesEnquiryScreenCode => SalesEnquiryScreenCatalog.Sections,
                         SalesQuotationScreenCode => SalesQuotationScreenCatalog.Sections,
+                        SalesOrderScreenCode => SalesOrderScreenCatalog.Sections,
+                        SalesCreditNoteScreenCode => SalesCreditNoteScreenCatalog.Sections,
+                        SalesDebitNoteScreenCode => SalesDebitNoteScreenCatalog.Sections,
                         _ => SalesInvoiceScreenCatalog.Sections
                     };
 
