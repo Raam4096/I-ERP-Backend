@@ -31,6 +31,10 @@ public sealed class SalesQuotation : AuditableEntity
     public string? Delivery { get; set; }
     public string? Notes { get; set; }
 
+    /// <summary>Optional link to a sales enquiry (no FK — open for workflow changes).</summary>
+    public Guid? SourceEnquiryId { get; set; }
+    public string? SourceEnquiryCode { get; set; }
+
     // Legacy columns retained for compatibility with prior skeleton migration.
     public Guid? SubsidiaryId { get; set; }
     public Guid? CustomerId { get; set; }

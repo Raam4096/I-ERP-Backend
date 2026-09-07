@@ -73,7 +73,7 @@ Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that ret
 | Manufacturing | Production Planning, Work Orders, Quality Control |
 
 - **CRM is strict**: module `code=crm`, `name=CRM`, screens = `crm-leads` + `crm-opportunities` only.
-- **Sales is strict**: module `code=sales`, `name=Sales`, screens = `sales-enquiries`, `sales-quotations`, `sales-invoices` only.
+- **Sales screens**: module `code=sales`, `name=Sales`, screens = `sales-enquiries`, `sales-quotations`, `sales-orders`, `sales-credit-notes`, `sales-debit-notes`, `sales-invoices`. Layouts stay metadata-driven for enhancements.
 - **Implemented**: `renderMode = "generic"` for CRM Leads/Opportunities and Sales Enquiry/Quotation/Invoice.
 - **Other modules**: stub screens with `renderMode = "under_implementation"` until built — do not invent extra screens.
 

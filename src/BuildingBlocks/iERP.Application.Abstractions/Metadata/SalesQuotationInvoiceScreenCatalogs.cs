@@ -21,6 +21,7 @@ public static class SalesQuotationScreenCatalog
             new("status", "Status", "text", "select", 7, false, false),
             new("documentDate", "Document Date", "date", "datepicker", 8, false, false),
             new("validUntil", "Valid Until", "date", "datepicker", 9, false, false),
+            new("sourceEnquiryCode", "Source Enquiry", "text", "input", 10, false, true),
         ]),
         new("commercial", "Commercial", "Commercial classification and currency.", 2,
         [
@@ -68,6 +69,8 @@ public static class SalesInvoiceScreenCatalog
             new("status", "Status", "text", "select", 7, false, false),
             new("documentDate", "Document Date", "date", "datepicker", 8, false, false),
             new("dueDate", "Due Date", "date", "datepicker", 9, false, false),
+            new("sourceOrderCode", "Source Order", "text", "input", 10, false, true),
+            new("sourceQuotationCode", "Source Quotation", "text", "input", 11, false, true),
         ]),
         new("commercial", "Commercial", "Commercial classification and currency.", 2,
         [

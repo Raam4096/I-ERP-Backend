@@ -1,4 +1,4 @@
-# UI guide: Sales module (Enquiry / Quotation / Invoice)
+# UI guide: Sales module
 
 Share with frontend after backend deploy + DB migrate.
 
@@ -9,38 +9,48 @@ GET /api/v1/metadata/modules
 Authorization: Bearer <token>
 ```
 
-Expect module:
-
-| Field | Value |
-|-------|--------|
-| `code` | `sales` |
-| `name` | `Sales` |
-| `source` | `metadata` |
-| screens | **Sales Enquiry**, **Quotation**, **Invoice** only |
-
-Old module `sales-distribution` / Sales Orders is removed (soft-deleted on seed).
-
-### Screen codes / routes / APIs
+Expect module `sales` / **Sales** with screens:
 
 | Screen | `code` | `route` | `apiBasePath` |
 |--------|--------|---------|---------------|
 | Sales Enquiry | `sales-enquiries` | `/sales/enquiries` | `/api/v1/sales/enquiries` |
 | Quotation | `sales-quotations` | `/sales/quotations` | `/api/v1/sales/quotations` |
+| Orders | `sales-orders` | `/sales/orders` | `/api/v1/sales/orders` |
+| Credit Notes | `sales-credit-notes` | `/sales/credit-notes` | `/api/v1/sales/credit-notes` |
+| Debit Notes | `sales-debit-notes` | `/sales/debit-notes` | `/api/v1/sales/debit-notes` |
 | Invoice | `sales-invoices` | `/sales/invoices` | `/api/v1/sales/invoices` |
+
+Screen layouts are seeded and stay editable for field enhancements (do not hard-code form fields in UI — use metadata screens).
 
 ## Schema (GenericPage)
 
 ```http
 GET /api/v1/metadata/screens/sales-enquiries
 GET /api/v1/metadata/screens/sales-quotations
+GET /api/v1/metadata/screens/sales-orders
+GET /api/v1/metadata/screens/sales-credit-notes
+GET /api/v1/metadata/screens/sales-debit-notes
 GET /api/v1/metadata/screens/sales-invoices
 ```
 
-Field keys are **camelCase** (matches UI sample): `enquiryCode`, `contactPerson`, `projectedTotal`, `items`, …
+Field keys are **camelCase**.
 
-### Enquiry sections
+## Optional document links (open for workflow enhancements)
 
-`header`, `commercial`, `terms`, `follow_up`, `items` (line grid — `controlType: grid`, `dataType: json`)
+Documents are independent CRUD. Optional soft links (no hard FK / no forced conversion API yet):
+
+| Document | Optional source fields |
+|----------|------------------------|
+| Quotation | `sourceEnquiryId` / `sourceEnquiryCode` |
+| Order | `sourceEnquiryId`, `sourceQuotationId` (+ codes) |
+| Invoice | `sourceOrderId`, `sourceQuotationId` (+ codes) |
+| Credit / Debit note | `sourceInvoiceId` / `sourceInvoiceCode` |
+
+If you pass a source **Id**, the API validates it exists and fills the code. Invalid ids return validation errors.
+
+Suggested chain for UI (all optional):
+
+`Enquiry → Quotation → Order → Invoice → Credit/Debit Note`
 
 ## Example payload (Enquiry)
 
@@ -48,56 +58,27 @@ Field keys are **camelCase** (matches UI sample): `enquiryCode`, `contactPerson`
 GET /api/v1/sales/enquiries/example
 ```
 
-Returns the Globex sample document (same shape as create body).
-
 ## CRUD APIs (all need JWT)
 
-### Enquiries
+| Area | Base path |
+|------|-----------|
+| Enquiries | `/api/v1/sales/enquiries` |
+| Quotations | `/api/v1/sales/quotations` |
+| Orders | `/api/v1/sales/orders` |
+| Invoices | `/api/v1/sales/invoices` |
+| Credit notes | `/api/v1/sales/credit-notes` |
+| Debit notes | `/api/v1/sales/debit-notes` |
 
-| Method | Path |
-|--------|------|
-| GET | `/api/v1/sales/enquiries` |
-| GET | `/api/v1/sales/enquiries/{id}` |
-| GET | `/api/v1/sales/enquiries/example` |
-| POST | `/api/v1/sales/enquiries` |
-| PUT | `/api/v1/sales/enquiries/{id}` |
-| DELETE | `/api/v1/sales/enquiries/{id}` |
+Each supports `GET /`, `GET /{id}`, `POST /`, `PUT /{id}`, `DELETE /{id}` (enquiries also have `/example`).
 
-### Quotations
+## Create body shape (shared)
 
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/v1/sales/quotations` |
-| GET/PUT/DELETE | `/api/v1/sales/quotations/{id}` |
+Customer is required. Line items use the shared `items[]` grid (`category`, `item`, `quantity`, `rate`, `amount`, …).
 
-### Invoices
+Auto codes: `TEA-ENQ-…`, `TEA-QTN-…`, `TEA-SO-…`, `TEA-INV-…`, `TEA-CN-…`, `TEA-DN-…`.
 
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/v1/sales/invoices` |
-| GET/PUT/DELETE | `/api/v1/sales/invoices/{id}` |
+## Deploy notes
 
-## Create Enquiry body (camelCase)
-
-Use the UI sample shape. Required: `customer`, `title`.
-
-`items[]` fields: `category`, `item`, `description`, `quantity`, `uom`, `priceLevel`, `rate`, `discount`, `amount`, `taxCode`, `grossAmount`, `className`, `countryOfOrigin`, `hsCode`.
-
-If `enquiryCode` / `quotationCode` / `invoiceCode` omitted, backend auto-generates (`TEA-ENQ-…`, `TEA-QTN-…`, `TEA-INV-…`).
-
-Dates: prefer `YYYY-MM-DD` (`expectedClose`, `followUpDate`, …).
-
-## UI binding rules
-
-1. Navbar from **metadata modules only** (includes Sales + CRM + dynamic).
-2. Open screen → load schema from metadata → bind controls by `fieldKey`.
-3. Line items: render `items` as a grid; POST/PUT send `items` array.
-4. Do not hardcode Sales field lists — metadata is source of truth.
-5. CRM Lead JSON (`primary_information` / snake_case) is **not** Sales Enquiry — keep CRM separate.
-
-## After deploy
-
-1. Run Sales migration (`SalesDbContext`).
-2. Restart API so metadata seeder adds Sales screens.
-3. Login → `GET /api/v1/metadata/modules` → confirm `sales` with 3 screens.
-4. `GET /api/v1/sales/enquiries/example` → paint demo form.
+1. Apply Sales migration `AddSalesOrderAndDebitCreditNoteCommercialFields`.
+2. Restart API so metadata seeder registers the new Sales screens.
+3. UI navbar = `GET /api/v1/metadata/modules` only.

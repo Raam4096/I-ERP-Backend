@@ -26,6 +26,10 @@ public static class Permissions
         public const string OrderRead = "sales.order.read";
         public const string InvoiceRead = "sales.invoice.read";
         public const string InvoiceCreate = "sales.invoice.create";
+        public const string CreditNoteRead = "sales.credit_note.read";
+        public const string CreditNoteCreate = "sales.credit_note.create";
+        public const string DebitNoteRead = "sales.debit_note.read";
+        public const string DebitNoteCreate = "sales.debit_note.create";
     }
 
     public static class Finance

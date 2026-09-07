@@ -3,7 +3,7 @@ namespace iERP.Application.Abstractions.Metadata;
 /// <summary>
 /// Product (predefined) modules/screens.
 /// CRM: Leads + Opportunities only.
-/// Sales: Sales Enquiry + Quotation + Invoice only.
+/// Sales: Enquiry, Quotation, Orders, Debit/Credit Notes, Invoice.
 /// Other modules stay stubs until implemented.
 /// </summary>
 public static class PredefinedModulesCatalog
@@ -13,8 +13,8 @@ public static class PredefinedModulesCatalog
 
     public static IReadOnlyList<PredefinedModuleSpec> Modules { get; } =
     [
-        // Strict: Sales has ONLY Enquiry, Quotation, Invoice.
-        new("sales", "Sales", "Sales enquiry, quotation, and invoicing",
+        // Sales commercial documents — layouts remain open for field enhancements.
+        new("sales", "Sales", "Sales enquiry, quotation, orders, debit/credit notes, and invoicing",
         [
             new PredefinedScreenSpec(
                 SalesEnquiryScreenCatalog.ScreenCode,
@@ -28,6 +28,27 @@ public static class PredefinedModulesCatalog
                 SalesQuotationScreenCatalog.ScreenName,
                 SalesQuotationScreenCatalog.Route,
                 SalesQuotationScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesOrderScreenCatalog.ScreenCode,
+                SalesOrderScreenCatalog.ScreenName,
+                SalesOrderScreenCatalog.Route,
+                SalesOrderScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesCreditNoteScreenCatalog.ScreenCode,
+                SalesCreditNoteScreenCatalog.ScreenName,
+                SalesCreditNoteScreenCatalog.Route,
+                SalesCreditNoteScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesDebitNoteScreenCatalog.ScreenCode,
+                SalesDebitNoteScreenCatalog.ScreenName,
+                SalesDebitNoteScreenCatalog.Route,
+                SalesDebitNoteScreenCatalog.ApiBasePath,
                 GenericRenderMode,
                 IsImplemented: true),
             new PredefinedScreenSpec(

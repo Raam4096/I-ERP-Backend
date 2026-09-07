@@ -126,6 +126,8 @@ public sealed class SalesQuotationDto
     public string? Prices { get; init; }
     public string? Delivery { get; init; }
     public string? Notes { get; init; }
+    public Guid? SourceEnquiryId { get; init; }
+    public string? SourceEnquiryCode { get; init; }
     public IReadOnlyList<SalesLineItemDto> Items { get; init; } = [];
 }
 
@@ -152,6 +154,8 @@ public sealed class UpsertSalesQuotationRequest
     public string? Prices { get; set; }
     public string? Delivery { get; set; }
     public string? Notes { get; set; }
+    public Guid? SourceEnquiryId { get; set; }
+    public string? SourceEnquiryCode { get; set; }
     public IReadOnlyList<SalesLineItemDto>? Items { get; set; }
 }
 
@@ -177,6 +181,10 @@ public sealed class SalesInvoiceDto
     public decimal? ProjectedTotal { get; init; }
     public string? Payment { get; init; }
     public string? Notes { get; init; }
+    public Guid? SourceOrderId { get; init; }
+    public string? SourceOrderCode { get; init; }
+    public Guid? SourceQuotationId { get; init; }
+    public string? SourceQuotationCode { get; init; }
     public IReadOnlyList<SalesLineItemDto> Items { get; init; } = [];
 }
 
@@ -201,5 +209,125 @@ public sealed class UpsertSalesInvoiceRequest
     public decimal? ProjectedTotal { get; set; }
     public string? Payment { get; set; }
     public string? Notes { get; set; }
+    public Guid? SourceOrderId { get; set; }
+    public string? SourceOrderCode { get; set; }
+    public Guid? SourceQuotationId { get; set; }
+    public string? SourceQuotationCode { get; set; }
+    public IReadOnlyList<SalesLineItemDto>? Items { get; set; }
+}
+
+public sealed class SalesOrderDto
+{
+    public Guid Id { get; init; }
+    public string OrderCode { get; init; } = string.Empty;
+    public string Customer { get; init; } = string.Empty;
+    public string? ContactPerson { get; init; }
+    public string? Email { get; init; }
+    public string? Phone { get; init; }
+    public string? Title { get; init; }
+    public string Status { get; init; } = "Draft";
+    public DateOnly? DocumentDate { get; init; }
+    public DateOnly? DeliveryDate { get; init; }
+    public string? Subsidiary { get; init; }
+    public string? ClassName { get; init; }
+    public string? Location { get; init; }
+    public string? Department { get; init; }
+    public string? SalesRep { get; init; }
+    public string Currency { get; init; } = "INR - RUPEE";
+    public decimal ExchangeRate { get; init; } = 1m;
+    public decimal? ProjectedTotal { get; init; }
+    public string? Payment { get; init; }
+    public string? Prices { get; init; }
+    public string? Delivery { get; init; }
+    public string? Notes { get; init; }
+    public Guid? SourceEnquiryId { get; init; }
+    public string? SourceEnquiryCode { get; init; }
+    public Guid? SourceQuotationId { get; init; }
+    public string? SourceQuotationCode { get; init; }
+    public IReadOnlyList<SalesLineItemDto> Items { get; init; } = [];
+}
+
+public sealed class UpsertSalesOrderRequest
+{
+    public string? OrderCode { get; set; }
+    public string Customer { get; set; } = string.Empty;
+    public string? ContactPerson { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? Title { get; set; }
+    public string? Status { get; set; }
+    public DateOnly? DocumentDate { get; set; }
+    public DateOnly? DeliveryDate { get; set; }
+    public string? Subsidiary { get; set; }
+    public string? ClassName { get; set; }
+    public string? Location { get; set; }
+    public string? Department { get; set; }
+    public string? SalesRep { get; set; }
+    public string? Currency { get; set; }
+    public decimal? ExchangeRate { get; set; }
+    public decimal? ProjectedTotal { get; set; }
+    public string? Payment { get; set; }
+    public string? Prices { get; set; }
+    public string? Delivery { get; set; }
+    public string? Notes { get; set; }
+    public Guid? SourceEnquiryId { get; set; }
+    public string? SourceEnquiryCode { get; set; }
+    public Guid? SourceQuotationId { get; set; }
+    public string? SourceQuotationCode { get; set; }
+    public IReadOnlyList<SalesLineItemDto>? Items { get; set; }
+}
+
+public sealed class SalesAdjustmentNoteDto
+{
+    public Guid Id { get; init; }
+    public string NoteCode { get; init; } = string.Empty;
+    public string Customer { get; init; } = string.Empty;
+    public string? ContactPerson { get; init; }
+    public string? Email { get; init; }
+    public string? Phone { get; init; }
+    public string? Title { get; init; }
+    public string Status { get; init; } = "Draft";
+    public DateOnly? DocumentDate { get; init; }
+    public DateOnly? DueDate { get; init; }
+    public string? Reason { get; init; }
+    public string? Subsidiary { get; init; }
+    public string? ClassName { get; init; }
+    public string? Location { get; init; }
+    public string? Department { get; init; }
+    public string? SalesRep { get; init; }
+    public string Currency { get; init; } = "INR - RUPEE";
+    public decimal ExchangeRate { get; init; } = 1m;
+    public decimal? ProjectedTotal { get; init; }
+    public string? Payment { get; init; }
+    public string? Notes { get; init; }
+    public Guid? SourceInvoiceId { get; init; }
+    public string? SourceInvoiceCode { get; init; }
+    public IReadOnlyList<SalesLineItemDto> Items { get; init; } = [];
+}
+
+public sealed class UpsertSalesAdjustmentNoteRequest
+{
+    public string? NoteCode { get; set; }
+    public string Customer { get; set; } = string.Empty;
+    public string? ContactPerson { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? Title { get; set; }
+    public string? Status { get; set; }
+    public DateOnly? DocumentDate { get; set; }
+    public DateOnly? DueDate { get; set; }
+    public string? Reason { get; set; }
+    public string? Subsidiary { get; set; }
+    public string? ClassName { get; set; }
+    public string? Location { get; set; }
+    public string? Department { get; set; }
+    public string? SalesRep { get; set; }
+    public string? Currency { get; set; }
+    public decimal? ExchangeRate { get; set; }
+    public decimal? ProjectedTotal { get; set; }
+    public string? Payment { get; set; }
+    public string? Notes { get; set; }
+    public Guid? SourceInvoiceId { get; set; }
+    public string? SourceInvoiceCode { get; set; }
     public IReadOnlyList<SalesLineItemDto>? Items { get; set; }
 }
