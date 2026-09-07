@@ -47,6 +47,13 @@ GET /api/v1/metadata/modules?activeOnly=true
 
 Do **not** build the main navbar from `GET /api/v1/dynamic_modules` — that returns **only** custom (dynamic) modules. The metadata modules call already merges both.
 
+| Query | What you get |
+|-------|----------------|
+| `GET /api/v1/metadata/modules` (default / `activeOnly=true`) | **All predefined metadata modules** + **active** dynamic modules |
+| `GET /api/v1/metadata/modules?activeOnly=false` | All predefined metadata modules + **all** dynamic modules (incl. inactive) |
+
+`activeOnly` applies to **dynamic** modules only. Product/predefined modules are always included (soft-deleted excluded).
+
 | `source` | Meaning | Example |
 |----------|---------|---------|
 | `"metadata"` | Predefined / Hybrid (seeded) | CRM → screen `crm-leads` |

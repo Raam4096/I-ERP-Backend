@@ -442,6 +442,7 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             dirty = true;
         }
 
+        // Keep predefined product modules active so navbar/catalog always includes them.
         if (module.Name != spec.Name || module.Description != spec.Description || !module.IsActive)
         {
             module.Name = spec.Name;

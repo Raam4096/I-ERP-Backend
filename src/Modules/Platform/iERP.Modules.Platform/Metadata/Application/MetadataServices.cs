@@ -57,18 +57,13 @@ public sealed class MetadataCatalogService : IMetadataCatalogService
     {
         EnsureTenant();
 
-        // Always merge both sources. `activeOnly` only filters IsActive within each source —
-        // it must never pick metadata XOR dynamic (that broke Railway navbar).
-        var metadataQuery = _metadataDb.ModuleDefinitions
+        // Navbar/catalog contract: ALWAYS return predefined metadata modules + dynamic modules.
+        // Do not filter metadata ModuleDefinitions by IsActive in SQL — that hid CRM/Sales on
+        // production when activeOnly=true even though rows materialized as isActive=true.
+        // Soft-delete + tenant filters still apply. activeOnly only affects dynamic modules.
+        var metadataModules = await _metadataDb.ModuleDefinitions
             .AsNoTracking()
             .Include(x => x.Screens)
-            .AsQueryable();
-        if (activeOnly)
-        {
-            metadataQuery = metadataQuery.Where(x => x.IsActive);
-        }
-
-        var metadataModules = await metadataQuery
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
