@@ -92,7 +92,7 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             {
                 if (screenSpec.Code == CrmLeadsScreenCode)
                 {
-                    if (await EnsureCrmLeadsLayoutAsync(tenantId, module.Id, cancellationToken))
+                    if (await EnsureCrmLeadsLayoutAsync(tenantId, module.Id, screenSpec, cancellationToken))
                     {
                         changedScreens++;
                     }
@@ -698,7 +698,7 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
         return changed;
     }
 
-    private async Task<bool> EnsureCrmLeadsLayoutAsync(Guid tenantId, Guid moduleId, CancellationToken cancellationToken)
+    private async Task<bool> EnsureCrmLeadsLayoutAsync(Guid tenantId, Guid moduleId, PredefinedScreenSpec screenSpec, CancellationToken cancellationToken)
     {
         var screen = await _db.ScreenDefinitions
             .IgnoreQueryFilters()
@@ -715,7 +715,7 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             {
                 ModuleDefinitionId = moduleId,
                 Code = CrmLeadsScreenCode,
-                Name = CrmLeadsScreenCatalog.ScreenName,
+                Name = screenSpec.Name,
                 Route = CrmLeadsScreenCatalog.Route,
                 RenderMode = PredefinedModulesCatalog.GenericRenderMode,
                 EntityName = CrmLeadsScreenCode,
@@ -739,7 +739,7 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
             }
 
             screen.ModuleDefinitionId = moduleId;
-            screen.Name = CrmLeadsScreenCatalog.ScreenName;
+            screen.Name = screenSpec.Name;
             screen.Route = CrmLeadsScreenCatalog.Route;
             screen.ApiBasePath = CrmLeadsScreenCatalog.ApiBasePath;
             screen.EntityName = CrmLeadsScreenCode;
