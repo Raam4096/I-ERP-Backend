@@ -26,6 +26,8 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
     public const string SalesOrderScreenCode = SalesOrderScreenCatalog.ScreenCode;
     public const string SalesCreditNoteScreenCode = SalesCreditNoteScreenCatalog.ScreenCode;
     public const string SalesDebitNoteScreenCode = SalesDebitNoteScreenCatalog.ScreenCode;
+    public const string SalesCreditDebitNoteScreenCode = SalesCreditDebitNoteScreenCatalog.ScreenCode;
+    public const string SalesDeliveryOrderScreenCode = SalesDeliveryOrderScreenCatalog.ScreenCode;
     public const string SalesInvoiceScreenCode = SalesInvoiceScreenCatalog.ScreenCode;
 
     private readonly MetadataDbContext _db;
@@ -101,15 +103,19 @@ public sealed class DefaultMetadataSeeder : IDataSeeder
                 if (screenSpec.Code is SalesEnquiryScreenCode
                     or SalesQuotationScreenCode
                     or SalesOrderScreenCode
+                    or SalesCreditDebitNoteScreenCode
+                    or SalesDeliveryOrderScreenCode
+                    or SalesInvoiceScreenCode
                     or SalesCreditNoteScreenCode
-                    or SalesDebitNoteScreenCode
-                    or SalesInvoiceScreenCode)
+                    or SalesDebitNoteScreenCode)
                 {
                     var sections = screenSpec.Code switch
                     {
                         SalesEnquiryScreenCode => SalesEnquiryScreenCatalog.Sections,
                         SalesQuotationScreenCode => SalesQuotationScreenCatalog.Sections,
                         SalesOrderScreenCode => SalesOrderScreenCatalog.Sections,
+                        SalesCreditDebitNoteScreenCode => SalesCreditDebitNoteScreenCatalog.Sections,
+                        SalesDeliveryOrderScreenCode => SalesDeliveryOrderScreenCatalog.Sections,
                         SalesCreditNoteScreenCode => SalesCreditNoteScreenCatalog.Sections,
                         SalesDebitNoteScreenCode => SalesDebitNoteScreenCatalog.Sections,
                         _ => SalesInvoiceScreenCatalog.Sections

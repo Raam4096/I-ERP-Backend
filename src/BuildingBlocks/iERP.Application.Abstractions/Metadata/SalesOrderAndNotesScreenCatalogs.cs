@@ -142,3 +142,47 @@ public static class SalesDebitNoteScreenCatalog
         ]),
     ];
 }
+
+public static class SalesCreditDebitNoteScreenCatalog
+{
+    public const string ScreenCode = "sales-credit-debit-notes";
+    public const string ModuleCode = "sales";
+    public const string ScreenName = "Credit & Debit Notes";
+    public const string Route = "/sales/credit-debit-notes";
+    public const string ApiBasePath = "/api/v1/sales/credit-debit-notes";
+
+    public static IReadOnlyList<ScreenSectionSpec> Sections => SalesCreditNoteScreenCatalog.Sections;
+}
+
+public static class SalesDeliveryOrderScreenCatalog
+{
+    public const string ScreenCode = "sales-delivery-orders";
+    public const string ModuleCode = "sales";
+    public const string ScreenName = "Delivery Orders";
+    public const string Route = "/sales/delivery-orders";
+    public const string ApiBasePath = "/api/v1/sales/delivery-orders";
+
+    public static IReadOnlyList<ScreenSectionSpec> Sections { get; } =
+    [
+        new("header", "Header", "Delivery order identity and customer details.", 1,
+        [
+            new("deliveryOrderNumber", "Delivery Order Number", "text", "input", 1, false, true),
+            new("customer", "Customer", "text", "input", 2, true, false),
+            new("contactPerson", "Contact Person", "text", "input", 3, false, false),
+            new("deliveryDate", "Delivery Date", "date", "datepicker", 4, false, false),
+            new("status", "Status", "text", "select", 5, false, false),
+            new("sourceOrderCode", "Source Sales Order", "text", "input", 6, false, true),
+        ]),
+        new("commercial", "Commercial", "Subsidiary and dispatch location.", 2,
+        [
+            new("subsidiary", "Subsidiary", "text", "select", 1, false, false),
+            new("dispatchLocation", "Dispatch Location", "text", "input", 2, false, false),
+            new("shippingMethod", "Shipping Method", "text", "input", 3, false, false),
+        ]),
+        new("items", "Line Items", "Delivered items grid.", 3,
+        [
+            new("items", "Items", "json", "grid", 1, false, false),
+        ]),
+    ];
+}
+

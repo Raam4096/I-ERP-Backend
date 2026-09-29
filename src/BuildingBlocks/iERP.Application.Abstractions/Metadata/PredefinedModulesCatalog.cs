@@ -13,105 +13,108 @@ public static class PredefinedModulesCatalog
 
     public static IReadOnlyList<PredefinedModuleSpec> Modules { get; } =
     [
-        // Sales commercial documents — layouts remain open for field enhancements.
-        new("sales", "Sales", "Sales enquiry, quotation, orders, debit/credit notes, and invoicing",
-        [
-            new PredefinedScreenSpec(
-                SalesEnquiryScreenCatalog.ScreenCode,
-                SalesEnquiryScreenCatalog.ScreenName,
-                SalesEnquiryScreenCatalog.Route,
-                SalesEnquiryScreenCatalog.ApiBasePath,
-                GenericRenderMode,
-                IsImplemented: true),
-            new PredefinedScreenSpec(
-                SalesQuotationScreenCatalog.ScreenCode,
-                SalesQuotationScreenCatalog.ScreenName,
-                SalesQuotationScreenCatalog.Route,
-                SalesQuotationScreenCatalog.ApiBasePath,
-                GenericRenderMode,
-                IsImplemented: true),
-            new PredefinedScreenSpec(
-                SalesOrderScreenCatalog.ScreenCode,
-                SalesOrderScreenCatalog.ScreenName,
-                SalesOrderScreenCatalog.Route,
-                SalesOrderScreenCatalog.ApiBasePath,
-                GenericRenderMode,
-                IsImplemented: true),
-            new PredefinedScreenSpec(
-                SalesCreditNoteScreenCatalog.ScreenCode,
-                SalesCreditNoteScreenCatalog.ScreenName,
-                SalesCreditNoteScreenCatalog.Route,
-                SalesCreditNoteScreenCatalog.ApiBasePath,
-                GenericRenderMode,
-                IsImplemented: true),
-            new PredefinedScreenSpec(
-                SalesDebitNoteScreenCatalog.ScreenCode,
-                SalesDebitNoteScreenCatalog.ScreenName,
-                SalesDebitNoteScreenCatalog.Route,
-                SalesDebitNoteScreenCatalog.ApiBasePath,
-                GenericRenderMode,
-                IsImplemented: true),
-            new PredefinedScreenSpec(
-                SalesInvoiceScreenCatalog.ScreenCode,
-                SalesInvoiceScreenCatalog.ScreenName,
-                SalesInvoiceScreenCatalog.Route,
-                SalesInvoiceScreenCatalog.ApiBasePath,
-                GenericRenderMode,
-                IsImplemented: true),
-        ]),
-        new("procurement-hub", "Procurement Hub", "Purchase requests, orders, and supplier invoices",
-        [
-            Screen("purchase-requests", "Purchase Requests", "/procurement/requests", "/api/v1/purchase_orders/requests"),
-            Screen("purchase-orders", "Purchase Orders", "/procurement/orders", "/api/v1/purchase_orders"),
-            Screen("supplier-invoices", "Supplier Invoices", "/procurement/supplier-invoices", "/api/v1/purchase_orders/supplier-invoices"),
-        ]),
-        new("inventory-supply-chain", "Inventory & Supply Chain", "Items, warehouses, and stock movement",
-        [
-            Screen("item-management", "Item Management", "/inventory/items", "/api/v1/items"),
-            Screen("warehouse-management", "Warehouse Management", "/inventory/warehouses", "/api/v1/inventory/warehouses"),
-            Screen("stock-transfers", "Stock Transfers", "/inventory/stock-transfers", "/api/v1/inventory/stock-transfers"),
-        ]),
-        new("finance-treasury", "Finance & Treasury", "Ledger and payables / receivables",
-        [
-            Screen("general-ledger", "General Ledger", "/finance/ledger", "/api/v1/finance/ledger"),
-            Screen("accounts-payable", "Accounts Payable", "/finance/ap", "/api/v1/finance/ap"),
-            Screen("accounts-receivable", "Accounts Receivable", "/finance/ar", "/api/v1/finance/ar"),
-        ]),
-        // Strict: CRM has ONLY Leads + Opportunities.
+        // 1. CRM
         new("crm", "CRM", "Customer relationship management",
         [
             new PredefinedScreenSpec(
                 CrmLeadsScreenCatalog.ScreenCode,
-                CrmLeadsScreenCatalog.ScreenName,
+                "Lead",
                 CrmLeadsScreenCatalog.Route,
                 CrmLeadsScreenCatalog.ApiBasePath,
                 GenericRenderMode,
                 IsImplemented: true),
             new PredefinedScreenSpec(
                 CrmOpportunitiesScreenCatalog.ScreenCode,
-                CrmOpportunitiesScreenCatalog.ScreenName,
+                "Opportunity",
                 CrmOpportunitiesScreenCatalog.Route,
                 CrmOpportunitiesScreenCatalog.ApiBasePath,
                 GenericRenderMode,
                 IsImplemented: true),
         ]),
-        new("hr-payroll", "HR & Payroll", "Employees, leave, and payroll",
+
+        // 2. Sales
+        new("sales", "Sales", "Sales enquiry, quotations, orders, invoices, credit & debit notes, and delivery orders",
         [
-            Screen("employee-management", "Employee Management", "/hr/employees", "/api/v1/hr/employees"),
-            Screen("leave-management", "Leave Management", "/hr/leave", "/api/v1/hr/leave"),
-            Screen("payroll-processing", "Payroll Processing", "/hr/payroll", "/api/v1/hr/payroll"),
+            new PredefinedScreenSpec(
+                SalesEnquiryScreenCatalog.ScreenCode,
+                "Sales Enquiry",
+                SalesEnquiryScreenCatalog.Route,
+                SalesEnquiryScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesQuotationScreenCatalog.ScreenCode,
+                "Sales Quotations",
+                SalesQuotationScreenCatalog.Route,
+                SalesQuotationScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesOrderScreenCatalog.ScreenCode,
+                "Sales Orders",
+                SalesOrderScreenCatalog.Route,
+                SalesOrderScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesInvoiceScreenCatalog.ScreenCode,
+                "Sales Invoices",
+                SalesInvoiceScreenCatalog.Route,
+                SalesInvoiceScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesCreditDebitNoteScreenCatalog.ScreenCode,
+                "Credit & Debit Notes",
+                SalesCreditDebitNoteScreenCatalog.Route,
+                SalesCreditDebitNoteScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
+            new PredefinedScreenSpec(
+                SalesDeliveryOrderScreenCatalog.ScreenCode,
+                "Delivery Orders",
+                SalesDeliveryOrderScreenCatalog.Route,
+                SalesDeliveryOrderScreenCatalog.ApiBasePath,
+                GenericRenderMode,
+                IsImplemented: true),
         ]),
-        new("project-management", "Project Management", "Projects, tasks, and billing",
+
+        // 3. HR
+        new("hr", "HR", "Human resources and employee management",
         [
-            Screen("project-portfolio", "Project Portfolio", "/projects/portfolio", "/api/v1/projects"),
-            Screen("project-tasks", "Project Tasks", "/projects/tasks", "/api/v1/projects/tasks"),
-            Screen("project-billing", "Project Billing", "/projects/billing", "/api/v1/projects/billing"),
+            new PredefinedScreenSpec(
+                "hr-employees",
+                "Employee",
+                "/hr/employees",
+                "/api/v1/hr/employees",
+                UnderImplementationRenderMode,
+                IsImplemented: false),
         ]),
-        new("manufacturing", "Manufacturing", "Planning, work orders, and quality",
+
+        // 4. Masters
+        new("masters", "Masters", "Core master data management",
         [
-            Screen("production-planning", "Production Planning", "/manufacturing/planning", "/api/v1/manufacturing/planning"),
-            Screen("work-orders", "Work Orders", "/manufacturing/work-orders", "/api/v1/manufacturing/work-orders"),
-            Screen("quality-control", "Quality Control", "/manufacturing/quality", "/api/v1/manufacturing/quality"),
+            new PredefinedScreenSpec(
+                "masters-currency",
+                "Currency",
+                "/settings/catalog/masters/currency",
+                "/api/v1/finance/currencies",
+                UnderImplementationRenderMode,
+                IsImplemented: false),
+            new PredefinedScreenSpec(
+                "masters-subsidiary",
+                "Subsidiary",
+                "/settings/catalog/masters/subsidiary",
+                "/api/v1/organization/subsidiaries",
+                UnderImplementationRenderMode,
+                IsImplemented: false),
+            new PredefinedScreenSpec(
+                "masters-uom",
+                "UOM",
+                "/settings/catalog/masters/uom",
+                "/api/v1/catalog/units-of-measure",
+                UnderImplementationRenderMode,
+                IsImplemented: false),
         ]),
     ];
 

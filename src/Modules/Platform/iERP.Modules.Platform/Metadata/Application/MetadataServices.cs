@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using iERP.Application.Abstractions.Metadata;
 using iERP.Modules.Platform.Metadata.Application.Dtos;
 using iERP.Modules.Platform.Metadata.Application.Layout;
 using iERP.Modules.Platform.Metadata.Domain;
@@ -57,38 +58,50 @@ public sealed class MetadataCatalogService : IMetadataCatalogService
     {
         EnsureTenant();
 
-        // Navbar/catalog contract: ALWAYS return predefined metadata modules + dynamic modules.
-        // Do not filter metadata ModuleDefinitions by IsActive in SQL — that hid CRM/Sales on
-        // production when activeOnly=true even though rows materialized as isActive=true.
-        // Soft-delete + tenant filters still apply. activeOnly only affects dynamic modules.
+        var moduleOrder = PredefinedModulesCatalog.Modules
+            .Select((m, index) => (m.Code, Index: index))
+            .ToDictionary(x => x.Code, x => x.Index, StringComparer.OrdinalIgnoreCase);
+
+        var screenOrder = PredefinedModulesCatalog.Modules
+            .SelectMany(m => m.Screens.Select((s, index) => (s.Code, Index: index)))
+            .ToDictionary(x => x.Code, x => x.Index, StringComparer.OrdinalIgnoreCase);
+
+        // Predefined metadata modules + dynamic modules. Soft-delete + tenant filters still apply.
         var metadataModules = await _metadataDb.ModuleDefinitions
             .AsNoTracking()
             .Include(x => x.Screens)
-            .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
-        var result = metadataModules.Select(m => new MetadataModuleDto
-        {
-            Id = m.Id,
-            Code = m.Code,
-            Name = m.Name,
-            Description = m.Description,
-            IsActive = m.IsActive,
-            Source = "metadata",
-            Screens = m.Screens
-                .Where(s => !s.IsDeleted)
-                .OrderBy(s => s.Name)
-                .Select(s => new MetadataScreenSummaryDto
-                {
-                    Id = s.Id,
-                    Code = s.Code,
-                    Name = s.Name,
-                    Route = s.Route,
-                    EntityName = s.EntityName,
-                    ApiBasePath = s.ApiBasePath
-                })
-                .ToList()
-        }).ToList();
+        var activeMetadataModules = activeOnly
+            ? metadataModules.Where(m => m.IsActive).ToList()
+            : metadataModules;
+
+        var result = activeMetadataModules
+            .OrderBy(m => moduleOrder.TryGetValue(m.Code, out var idx) ? idx : 999)
+            .ThenBy(m => m.Name)
+            .Select(m => new MetadataModuleDto
+            {
+                Id = m.Id,
+                Code = m.Code,
+                Name = m.Name,
+                Description = m.Description,
+                IsActive = m.IsActive,
+                Source = "metadata",
+                Screens = m.Screens
+                    .Where(s => !s.IsDeleted)
+                    .OrderBy(s => screenOrder.TryGetValue(s.Code, out var sIdx) ? sIdx : 999)
+                    .ThenBy(s => s.Name)
+                    .Select(s => new MetadataScreenSummaryDto
+                    {
+                        Id = s.Id,
+                        Code = s.Code,
+                        Name = s.Name,
+                        Route = s.Route,
+                        EntityName = s.EntityName,
+                        ApiBasePath = s.ApiBasePath
+                    })
+                    .ToList()
+            }).ToList();
 
         var dynamicQuery = _platformDb.DynamicModuleDefinitions
             .AsNoTracking()
@@ -141,7 +154,8 @@ public sealed class MetadataCatalogService : IMetadataCatalogService
         }
 
         return result
-            .OrderBy(x => x.Name)
+            .OrderBy(m => moduleOrder.TryGetValue(m.Code, out var idx) ? idx : 999)
+            .ThenBy(m => m.Name)
             .ToList();
     }
 
